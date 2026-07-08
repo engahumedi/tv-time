@@ -1,0 +1,454 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getShowDetail, getAllEpisodes, img } from '../lib/tmdb';
+import {
+  useShow,
+  useEpisodes,
+  useWatchedIds,
+  useIsInLibrary,
+} from '../lib/hooks';
+import {
+  upsertShow,
+  saveEpisodes,
+  markWatched,
+  unmarkWatched,
+  markSeasonWatched,
+  markShowWatched,
+  removeShow,
+  setStatus,
+} from '../lib/repo';
+import { celebrate } from '../lib/celebrate';
+import { Poster } from '../components/Poster';
+import { StatusBadge } from '../components/StatusBadge';
+import type { Show, Episode, ShowStatus } from '../types';
+
+const STATUSES: ShowStatus[] = [
+  'not_started',
+  'watching',
+  'up_to_date',
+  'finished',
+  'stopped',
+];
+
+export function ShowDetail() {
+  const { id } = useParams();
+  const showId = Number(id);
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const inLibrary = useIsInLibrary(showId);
+  const storedShow = useShow(showId);
+  const storedEpisodes = useEpisodes(showId);
+
+  // When not in the library, fetch a live preview from TMDB/demo.
+  const [previewShow, setPreviewShow] = useState<Show | null>(null);
+  const [previewEpisodes, setPreviewEpisodes] = useState<Episode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    (async () => {
+      try {
+        const detail = await getShowDetail(showId);
+        const eps = await getAllEpisodes(showId, detail.episodeRuntime);
+        if (!cancelled) {
+          setPreviewShow(detail);
+          setPreviewEpisodes(eps);
+        }
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showId]);
+
+  const show = inLibrary ? storedShow : previewShow;
+  const episodes = inLibrary ? storedEpisodes ?? [] : previewEpisodes;
+  const watchedIds = useWatchedIds(showId);
+
+  const seasons = useMemo(() => groupSeasons(episodes), [episodes]);
+
+  if (loading && !show) return <DetailSkeleton />;
+  if (error || !show) {
+    return (
+      <div className="pt-16 text-center">
+        <p className="text-4xl">😕</p>
+        <p className="mt-3 text-slate-300">{t('errors.load_failed')}</p>
+        <button className="btn-ghost mt-4" onClick={() => navigate(-1)}>
+          {t('common.close')}
+        </button>
+      </div>
+    );
+  }
+
+  const watchedCount = watchedIds ? watchedIds.size : 0;
+  const totalCount = episodes.length;
+
+  async function handleAdd() {
+    if (!show) return;
+    setAdding(true);
+    await upsertShow(show);
+    await saveEpisodes(previewEpisodes.length ? previewEpisodes : episodes);
+    setAdding(false);
+  }
+
+  async function toggleEpisode(ep: Episode) {
+    if (!watchedIds) return;
+    if (watchedIds.has(ep.id)) {
+      await unmarkWatched(ep.id, showId);
+    } else {
+      await markWatched(ep, Date.now(), 'manual', show!.episodeRuntime);
+      // Celebrate when this completes a season.
+      const seasonEps = episodes.filter(
+        (e) => e.seasonNumber === ep.seasonNumber,
+      );
+      const seasonWatched =
+        seasonEps.filter((e) => watchedIds.has(e.id) || e.id === ep.id).length;
+      if (seasonWatched === seasonEps.length) celebrate('big');
+      else celebrate('small');
+    }
+  }
+
+  return (
+    <div className="-mx-4">
+      {/* Backdrop hero */}
+      <div className="relative h-56 w-full overflow-hidden">
+        {show.backdropPath ? (
+          <img
+            src={img(show.backdropPath, 'w780') ?? ''}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="h-full w-full bg-navy-800" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent" />
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute start-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-navy-950/60 backdrop-blur"
+          aria-label={t('common.close')}
+        >
+          <svg className="rtl-flip" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="px-4">
+        <div className="-mt-16 flex gap-4">
+          <div className="w-28 shrink-0">
+            <Poster
+              path={show.posterPath}
+              alt={show.name}
+              className="aspect-[2/3] rounded-xl ring-1 ring-white/10 shadow-glass"
+            />
+          </div>
+          <div className="flex-1 pt-16">
+            <h1 className="text-xl font-extrabold leading-tight">{show.name}</h1>
+            <p className="mt-1 text-sm text-slate-400">
+              {show.firstAirDate?.slice(0, 4)}
+              {show.numberOfSeasons
+                ? ` · ${show.numberOfSeasons} ${t('common.seasons')}`
+                : ''}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {show.genres.slice(0, 3).map((g) => (
+                <span key={g} className="chip bg-white/5 text-slate-300">
+                  {g}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {inLibrary ? (
+            <>
+              <StatusSelect
+                value={storedShow?.status ?? 'watching'}
+                onChange={(s) => setStatus(showId, s)}
+              />
+              <button
+                className="btn-ghost text-sm"
+                onClick={async () => {
+                  if (confirm(t('show.remove_confirm'))) {
+                    await removeShow(showId);
+                    navigate(-1);
+                  }
+                }}
+              >
+                {t('common.remove')}
+              </button>
+            </>
+          ) : (
+            <button className="btn-gold" disabled={adding} onClick={handleAdd}>
+              {adding ? t('common.loading') : t('show.add_to_library')}
+            </button>
+          )}
+        </div>
+
+        {inLibrary && totalCount > 0 && (
+          <div className="mt-4">
+            <div className="mb-1 flex justify-between text-xs text-slate-400">
+              <span>
+                {t('show.progress', { watched: watchedCount, total: totalCount })}
+              </span>
+              <StatusBadge status={storedShow?.status ?? 'watching'} />
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <motion.div
+                className="h-full rounded-full bg-gold"
+                initial={{ width: 0 }}
+                animate={{
+                  width: `${totalCount ? (watchedCount / totalCount) * 100 : 0}%`,
+                }}
+                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Overview */}
+        {show.overview && (
+          <section className="mt-6">
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-400">
+              {t('show.overview')}
+            </h2>
+            <p className="text-sm leading-relaxed text-slate-300">
+              {show.overview}
+            </p>
+          </section>
+        )}
+
+        {inLibrary && totalCount > 0 && (
+          <button
+            className="btn-ghost mt-4 w-full text-sm"
+            onClick={() => markShowWatched(showId, show.episodeRuntime)}
+          >
+            {t('show.mark_show_watched')}
+          </button>
+        )}
+
+        {/* Seasons */}
+        <section className="mt-6 pb-4">
+          <h2 className="mb-3 text-lg font-bold">{t('show.seasons_title')}</h2>
+          {seasons.length === 0 ? (
+            <p className="text-sm text-slate-500">{t('show.no_episodes')}</p>
+          ) : (
+            <div className="space-y-3">
+              {seasons.map((season) => (
+                <SeasonBlock
+                  key={season.number}
+                  showId={showId}
+                  seasonNumber={season.number}
+                  episodes={season.episodes}
+                  watchedIds={watchedIds}
+                  inLibrary={inLibrary}
+                  defaultRuntime={show.episodeRuntime}
+                  onToggle={toggleEpisode}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function StatusSelect({
+  value,
+  onChange,
+}: {
+  value: ShowStatus;
+  onChange: (s: ShowStatus) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as ShowStatus)}
+      className="rounded-xl border border-white/10 bg-navy-800 px-3 py-2.5 text-sm font-semibold outline-none focus:border-gold/50"
+      aria-label={t('show.set_status')}
+    >
+      {STATUSES.map((s) => (
+        <option key={s} value={s}>
+          {t(`status.${s}`)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+interface SeasonGroup {
+  number: number;
+  episodes: Episode[];
+}
+
+function groupSeasons(episodes: Episode[]): SeasonGroup[] {
+  const map = new Map<number, Episode[]>();
+  for (const e of episodes) {
+    if (!map.has(e.seasonNumber)) map.set(e.seasonNumber, []);
+    map.get(e.seasonNumber)!.push(e);
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([number, eps]) => ({
+      number,
+      episodes: eps.sort((a, b) => a.episodeNumber - b.episodeNumber),
+    }));
+}
+
+function SeasonBlock({
+  showId,
+  seasonNumber,
+  episodes,
+  watchedIds,
+  inLibrary,
+  defaultRuntime,
+  onToggle,
+}: {
+  showId: number;
+  seasonNumber: number;
+  episodes: Episode[];
+  watchedIds: Set<string> | undefined;
+  inLibrary: boolean;
+  defaultRuntime: number;
+  onToggle: (ep: Episode) => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(seasonNumber === 1);
+  const watched = watchedIds
+    ? episodes.filter((e) => watchedIds.has(e.id)).length
+    : 0;
+  const allWatched = watched === episodes.length && episodes.length > 0;
+
+  return (
+    <div className="card overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-4 py-3 text-start"
+      >
+        <div>
+          <p className="font-bold">
+            {t('common.season')} {seasonNumber}
+          </p>
+          <p className="text-xs text-slate-400">
+            {watched} / {episodes.length} {t('common.episodes')}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {inLibrary && !allWatched && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                markSeasonWatched(showId, seasonNumber, defaultRuntime).then(() =>
+                  celebrate('big'),
+                );
+              }}
+              className="chip cursor-pointer bg-gold/15 text-gold-400 hover:bg-gold/25"
+            >
+              {t('show.mark_season_watched')}
+            </span>
+          )}
+          <svg
+            className={`transition-transform ${open ? 'rotate-180' : ''}`}
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.ul
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-white/5"
+          >
+            {episodes.map((ep) => {
+              const isWatched = watchedIds?.has(ep.id) ?? false;
+              return (
+                <li
+                  key={ep.id}
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">
+                      <span className="text-slate-500">{ep.episodeNumber}.</span>{' '}
+                      {ep.name}
+                    </p>
+                  </div>
+                  <button
+                    disabled={!inLibrary}
+                    onClick={() => onToggle(ep)}
+                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-all active:scale-90 ${
+                      isWatched
+                        ? 'border-gold bg-gold text-navy-950'
+                        : 'border-white/20 text-transparent hover:border-gold/60'
+                    } ${!inLibrary ? 'opacity-40' : ''}`}
+                    aria-label={t('show.mark_watched')}
+                    aria-pressed={isWatched}
+                  >
+                    <motion.svg
+                      key={isWatched ? 'on' : 'off'}
+                      initial={isWatched ? { scale: 0.4 } : false}
+                      animate={{ scale: 1 }}
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </motion.svg>
+                  </button>
+                </li>
+              );
+            })}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function DetailSkeleton() {
+  return (
+    <div className="-mx-4">
+      <div className="h-56 w-full shimmer" />
+      <div className="px-4">
+        <div className="-mt-16 flex gap-4">
+          <div className="aspect-[2/3] w-28 rounded-xl shimmer" />
+          <div className="flex-1 space-y-2 pt-16">
+            <div className="h-5 w-2/3 rounded shimmer" />
+            <div className="h-3 w-1/3 rounded shimmer" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

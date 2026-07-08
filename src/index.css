@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-navy-950 text-slate-100 font-sans antialiased;
+  background-image: radial-gradient(
+      1200px 600px at 50% -10%,
+      rgba(36, 51, 82, 0.55),
+      transparent 60%
+    ),
+    radial-gradient(800px 400px at 100% 0%, rgba(232, 184, 75, 0.06), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* Arabic font when RTL */
+html[dir='rtl'] body {
+  @apply font-arabic;
+}
+
+/* Flip directional utilities are handled by Tailwind logical props where used;
+   for icons that must flip in RTL, add the `.rtl-flip` class. */
+html[dir='rtl'] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+@layer components {
+  .glass {
+    @apply bg-navy-800/60 backdrop-blur-md border border-white/5 shadow-glass;
+  }
+  .glass-strong {
+    @apply bg-navy-800/80 backdrop-blur-xl border border-white/10 shadow-glass;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
+      font-semibold transition-all active:scale-95 disabled:opacity-50
+      disabled:pointer-events-none select-none;
+  }
+  .btn-gold {
+    @apply btn bg-gold text-navy-950 hover:bg-gold-400 shadow-gold;
+  }
+  .btn-ghost {
+    @apply btn bg-white/5 text-slate-100 hover:bg-white/10 border border-white/10;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .card {
+    @apply glass rounded-2xl;
+  }
+}
+
+/* Hide scrollbars on horizontal poster rails but keep them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Poster shimmer placeholder */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
