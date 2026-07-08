@@ -8,6 +8,15 @@ const IMG = 'https://image.tmdb.org/t/p';
 
 export const hasTmdbKey = Boolean(API_KEY && API_KEY.trim());
 
+/** Current UI language mapped to a TMDB language tag (Arabic titles/overviews). */
+function tmdbLang(): string {
+  try {
+    return localStorage.getItem('showtrack:lang') === 'ar' ? 'ar-SA' : 'en-US';
+  } catch {
+    return 'en-US';
+  }
+}
+
 /** Build a full image URL from a TMDB path. Returns null when no path. */
 export function img(
   path: string | null | undefined,
@@ -53,6 +62,7 @@ interface TmdbSearchResult {
   backdrop_path: string | null;
   first_air_date: string;
   genre_ids: number[];
+  vote_average: number;
 }
 
 /** Search shows by name. Falls back to the demo library with no key. */
@@ -64,6 +74,7 @@ export async function searchShows(query: string): Promise<Show[]> {
     tmdb<{ results: TmdbSearchResult[] }>('/search/tv', {
       query,
       include_adult: 'false',
+      language: tmdbLang(),
     }),
   ]);
   return data.results.map((r) => searchResultToShow(r, genres));
@@ -83,6 +94,7 @@ function searchResultToShow(
     firstAirDate: r.first_air_date || null,
     genres: (r.genre_ids || []).map((id) => genres[id]).filter(Boolean),
     episodeRuntime: 30,
+    voteAverage: r.vote_average || undefined,
     status: 'not_started',
     addedAt: Date.now(),
   };
@@ -100,7 +112,9 @@ interface TmdbShowDetail {
   number_of_episodes: number;
   number_of_seasons: number;
   episode_run_time: number[];
+  vote_average: number;
   seasons: { season_number: number; episode_count: number }[];
+  external_ids?: { imdb_id: string | null };
 }
 
 interface TmdbSeasonDetail {
@@ -124,7 +138,10 @@ export async function getShowDetail(id: number): Promise<Show> {
     if (!s) throw new Error('Show not found in demo library');
     return s;
   }
-  const d = await tmdb<TmdbShowDetail>(`/tv/${id}`);
+  const d = await tmdb<TmdbShowDetail>(`/tv/${id}`, {
+    language: tmdbLang(),
+    append_to_response: 'external_ids',
+  });
   return {
     id: d.id,
     name: d.name,
@@ -137,6 +154,8 @@ export async function getShowDetail(id: number): Promise<Show> {
     numberOfEpisodes: d.number_of_episodes,
     numberOfSeasons: d.number_of_seasons,
     episodeRuntime: d.episode_run_time?.[0] ?? 30,
+    voteAverage: d.vote_average || undefined,
+    imdbId: d.external_ids?.imdb_id ?? undefined,
     status: 'not_started',
     addedAt: Date.now(),
   };
@@ -148,7 +167,7 @@ export async function getAllEpisodes(
   fallbackRuntime = 30,
 ): Promise<Episode[]> {
   if (!hasTmdbKey || id < 0) return demoEpisodes(id);
-  const detail = await tmdb<TmdbShowDetail>(`/tv/${id}`);
+  const detail = await tmdb<TmdbShowDetail>(`/tv/${id}`, { language: tmdbLang() });
   const realSeasons = detail.seasons
     .map((s) => s.season_number)
     .filter((n) => n >= 1); // skip "Specials" (season 0)
@@ -159,7 +178,9 @@ export async function getAllEpisodes(
     const batch = realSeasons.slice(i, i + 4);
     const results = await Promise.all(
       batch.map((sn) =>
-        tmdb<TmdbSeasonDetail>(`/tv/${id}/season/${sn}`).catch(() => null),
+        tmdb<TmdbSeasonDetail>(`/tv/${id}/season/${sn}`, {
+          language: tmdbLang(),
+        }).catch(() => null),
       ),
     );
     for (const season of results) {

@@ -18,6 +18,7 @@ interface DemoShowSeed {
   firstAirDate: string;
   genres: string[];
   episodeRuntime: number;
+  voteAverage: number;
   seasons: { season: number; episodes: number; year: number; runtime: number }[];
 }
 
@@ -30,6 +31,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
     backdropPath: '/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg',
     firstAirDate: '2008-01-20',
+    voteAverage: 8.9,
     genres: ['Drama', 'Crime'],
     episodeRuntime: 47,
     seasons: [
@@ -48,6 +50,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/49WJfeN0moxb9IPfGn8AIqMGskD.jpg',
     backdropPath: '/56v2KjBlU4XaOv9rVYEQypROD7P.jpg',
     firstAirDate: '2016-07-15',
+    voteAverage: 8.6,
     genres: ['Drama', 'Sci-Fi & Fantasy', 'Mystery'],
     episodeRuntime: 51,
     seasons: [
@@ -65,6 +68,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/7DJKHzAi83BmQrWLrYYOqcoKfhR.jpg',
     backdropPath: '/mLyW3UTgi2lsMdtueYODcfAB9Ku.jpg',
     firstAirDate: '2005-03-24',
+    voteAverage: 8.6,
     genres: ['Comedy'],
     episodeRuntime: 22,
     seasons: [
@@ -83,6 +87,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg',
     backdropPath: '/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg',
     firstAirDate: '2011-04-17',
+    voteAverage: 8.4,
     genres: ['Sci-Fi & Fantasy', 'Drama', 'Action & Adventure'],
     episodeRuntime: 60,
     seasons: [
@@ -100,6 +105,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/eU1i6eHXlzMOlEq0ku1Rzq7Y4wA.jpg',
     backdropPath: '/9ijMGlJKqcslswWUzTEwScm82Gs.jpg',
     firstAirDate: '2019-11-12',
+    voteAverage: 8.4,
     genres: ['Sci-Fi & Fantasy', 'Action & Adventure'],
     episodeRuntime: 40,
     seasons: [
@@ -116,6 +122,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/2koX1xLkpTQM4IZebYvKysFW1Nh.jpg',
     backdropPath: '/l0qVZIpXtIo7km9u5Yqh0nKPOr5.jpg',
     firstAirDate: '1994-09-22',
+    voteAverage: 8.4,
     genres: ['Comedy'],
     episodeRuntime: 22,
     seasons: [
@@ -132,6 +139,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/hlLXt2tOPT6RRnjiUmoxyG1LTfi.jpg',
     backdropPath: '/lPS10hgHZY7CqQvbcQBwyk9RhFj.jpg',
     firstAirDate: '2019-05-06',
+    voteAverage: 9.3,
     genres: ['Drama', 'History'],
     episodeRuntime: 65,
     seasons: [{ season: 1, episodes: 5, year: 2019, runtime: 65 }],
@@ -145,6 +153,7 @@ const SEEDS: DemoShowSeed[] = [
     posterPath: '/hqA3vjOfW3RDhFXsHzE5wG1XVW6.jpg',
     backdropPath: '/2OZKKJ5nHgYkJQV1zHDdN0qBSb2.jpg',
     firstAirDate: '2013-04-07',
+    voteAverage: 9.0,
     genres: ['Animation', 'Action & Adventure', 'Sci-Fi & Fantasy'],
     episodeRuntime: 24,
     seasons: [
@@ -189,6 +198,7 @@ export function demoShows(): Show[] {
     numberOfSeasons: s.seasons.length,
     numberOfEpisodes: s.seasons.reduce((a, b) => a + b.episodes, 0),
     episodeRuntime: s.episodeRuntime,
+    voteAverage: s.voteAverage,
     status: 'not_started' as const,
     addedAt: Date.now(),
   }));

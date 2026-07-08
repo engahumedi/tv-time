@@ -23,6 +23,10 @@ export interface Show {
   numberOfSeasons?: number;
   /** Default runtime in minutes, used as a fallback for episodes with unknown runtime. */
   episodeRuntime: number;
+  /** TMDB community rating, 0–10 (undefined when unknown). */
+  voteAverage?: number;
+  /** IMDb id (e.g. "tt0903747"), used to look up the IMDb rating via OMDb. */
+  imdbId?: string;
   /** User-controlled status. */
   status: ShowStatus;
   /** When the show was added to the library. */

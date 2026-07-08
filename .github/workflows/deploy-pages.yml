@@ -37,6 +37,12 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # These are public, read-only client keys — they are embedded in the
+          # browser bundle by design (there is no way to hide a key in a static
+          # site). Rotate them anytime from your TMDB / OMDb account settings.
+          VITE_TMDB_API_KEY: '971118134814b1075d6e1a6c12be52ee'
+          VITE_OMDB_API_KEY: '76cd25ca'
 
       # Creates the Pages site automatically if it doesn't exist yet.
       - name: Configure Pages

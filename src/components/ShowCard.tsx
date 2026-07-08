@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Poster } from './Poster';
+import { TmdbRating } from './Rating';
 import type { Show } from '../types';
 
 /** Poster tile used across grids and rails. */
@@ -17,12 +18,13 @@ export function ShowCard({
       to={`/show/${show.id}`}
       className={`group block ${width} animate-fade-up`}
     >
-      <div className="aspect-[2/3] overflow-hidden rounded-xl shadow-soft ring-1 ring-white/[0.06] transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lift group-hover:ring-gold/50">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-xl shadow-soft ring-1 ring-white/[0.06] transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lift group-hover:ring-gold/50">
         <Poster
           path={show.posterPath}
           alt={show.name}
           className="h-full w-full transition-transform duration-500 group-hover:scale-105"
         />
+        <TmdbRating value={show.voteAverage} className="absolute end-1.5 top-1.5" />
       </div>
       <p className="mt-2 truncate text-sm font-semibold text-zinc-200">
         {show.name}

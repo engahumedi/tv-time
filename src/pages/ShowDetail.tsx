@@ -20,8 +20,10 @@ import {
   setStatus,
 } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
+import { getImdbRating, type ImdbRating } from '../lib/omdb';
 import { Poster } from '../components/Poster';
 import { StatusBadge } from '../components/StatusBadge';
+import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
 import type { Show, Episode, ShowStatus } from '../types';
 
 const STATUSES: ShowStatus[] = [
@@ -48,6 +50,7 @@ export function ShowDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [imdb, setImdb] = useState<ImdbRating | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +80,20 @@ export function ShowDetail() {
   const watchedIds = useWatchedIds(showId);
 
   const seasons = useMemo(() => groupSeasons(episodes), [episodes]);
+
+  // Fetch the IMDb rating (via OMDb) once we know the show's IMDb id.
+  const imdbId = show?.imdbId;
+  useEffect(() => {
+    setImdb(null);
+    if (!imdbId) return;
+    let cancelled = false;
+    getImdbRating(imdbId).then((r) => {
+      if (!cancelled) setImdb(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [imdbId]);
 
   if (loading && !show) return <DetailSkeleton />;
   if (error || !show) {
@@ -161,6 +178,12 @@ export function ShowDetail() {
                 ? ` · ${show.numberOfSeasons} ${t('common.seasons')}`
                 : ''}
             </p>
+            {(show.voteAverage || imdb) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <TmdbRating value={show.voteAverage} />
+                <ImdbBadge value={imdb?.rating} />
+              </div>
+            )}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {show.genres.slice(0, 3).map((g) => (
                 <span key={g} className="chip bg-white/5 text-slate-300">
