@@ -38,15 +38,11 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Supabase (login + cloud sync + the key-hiding proxy). Blank until
-          # you add these repo secrets; when present, the app enables accounts
-          # and routes TMDB/OMDb through the secure proxy.
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          # Direct client keys — used only until the proxy is live. Once
-          # Supabase is set up we remove these and rotate the keys (see SETUP.md).
-          VITE_TMDB_API_KEY: '971118134814b1075d6e1a6c12be52ee'
-          VITE_OMDB_API_KEY: '76cd25ca'
+          # Supabase: enables accounts + cloud sync, and routes TMDB/OMDb through
+          # the Edge Function proxy so NO TMDB/OMDb key ships in the browser.
+          # The URL and anon key are public by design (protected by RLS policies).
+          VITE_SUPABASE_URL: 'https://ahibgeazsfftwzlzytah.supabase.co'
+          VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoaWJnZWF6c2ZmdHd6bHp5dGFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTQ2MTksImV4cCI6MjA5OTA5MDYxOX0.sDux7501kvM_6ECYT4Xct7l_FSbpb6oLcimj3h6-MOU'
 
       # Creates the Pages site automatically if it doesn't exist yet.
       - name: Configure Pages
