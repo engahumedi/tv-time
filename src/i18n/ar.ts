@@ -50,7 +50,7 @@ export const ar: Translation = {
       'أضِف مسلسلًا من الاستكشاف، أو استورد سجلّك من TV Time لترى ما تشاهده تاليًا.',
     empty_cta: 'استكشف المسلسلات',
     import_cta: 'استيراد من TV Time',
-    caught_up_title: 'أنت مُتابِع لكل شيء! 🎉',
+    caught_up_title: 'أنت مُتابِع لكل شيء',
     caught_up_body: 'لا توجد حلقات غير مُشاهَدة الآن. حان وقت اكتشاف جديد.',
     next_episode: 'الحلقة التالية',
     aired: 'عُرضت في {{date}}',

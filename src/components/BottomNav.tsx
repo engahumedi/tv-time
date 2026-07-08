@@ -6,7 +6,7 @@ import { NAV_ITEMS } from './navItems';
 export function BottomNav() {
   const { t } = useTranslation();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-overlay/[0.07] bg-navy-900/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-overlay/[0.08] bg-navy-900/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
         {NAV_ITEMS.map((item) => (
           <NavLink
@@ -15,19 +15,19 @@ export function BottomNav() {
             end={item.to === '/'}
             className={({ isActive }) =>
               `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                isActive ? 'text-gold-400' : 'text-faint hover:text-fg'
+                isActive ? 'text-gold' : 'text-muted hover:text-fg'
               }`
             }
           >
             {({ isActive }) => (
               <>
                 <svg
-                  width="24"
-                  height="24"
+                  width="22"
+                  height="22"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={isActive ? 2.2 : 1.8}
+                  strokeWidth={isActive ? 1.9 : 1.6}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >

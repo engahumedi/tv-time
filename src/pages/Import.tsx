@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PackageOpen, Check, SearchX, Frown } from 'lucide-react';
+import type { ReactNode } from 'react';
 import {
   parseUpload,
   mergeResults,
@@ -106,7 +108,7 @@ export function Import() {
   return (
     <div className="space-y-5 pt-2">
       <div>
-        <h1 className="text-2xl font-extrabold">{t('import.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('import.title')}</h1>
         <p className="mt-1 text-sm text-muted">{t('import.subtitle')}</p>
       </div>
 
@@ -127,7 +129,7 @@ export function Import() {
                   : 'border-overlay/15 bg-overlay/[0.02] hover:border-gold/40'
               }`}
             >
-              <div className="mb-4 text-5xl">📦</div>
+              <PackageOpen size={38} strokeWidth={1.25} className="mb-4 text-muted" />
               <p className="font-bold">{t('import.dropzone_title')}</p>
               <p className="mt-1 text-sm text-muted">
                 {t('import.dropzone_body')}
@@ -225,7 +227,7 @@ export function Import() {
                 )}
               </AnimatePresence>
               <p className="font-semibold">{t('import.importing')}</p>
-              <p className="mt-1 h-5 text-sm text-gold-400">
+              <p className="mt-1 h-5 text-sm text-gold">
                 {currentPoster?.name}
               </p>
               <div className="mt-4 w-full max-w-xs">
@@ -238,8 +240,8 @@ export function Import() {
         {stage === 'done' && summary && (
           <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
             <div className="card p-8 text-center">
-              <div className="mb-3 text-5xl">🎉</div>
-              <h2 className="text-xl font-extrabold">{t('import.done_title')}</h2>
+              <Check size={40} strokeWidth={1.5} className="mx-auto mb-3 text-gold" />
+              <h2 className="text-xl font-bold">{t('import.done_title')}</h2>
               <p className="mt-3 text-fg">
                 {t('import.done_body', {
                   episodes: formatNumber(summary.episodesImported, i18n.language),
@@ -268,7 +270,7 @@ export function Import() {
         {stage === 'empty' && (
           <ErrorCard
             key="empty"
-            icon="🔎"
+            icon={<SearchX size={36} strokeWidth={1.5} />}
             title={t('import.nothing_found_title')}
             body={t('import.nothing_found_body')}
             onRetry={() => setStage('idle')}
@@ -279,7 +281,7 @@ export function Import() {
         {stage === 'error' && (
           <ErrorCard
             key="error"
-            icon="😕"
+            icon={<Frown size={36} strokeWidth={1.5} />}
             title={t('import.error_title')}
             body={t('import.error_body')}
             onRetry={() => setStage('idle')}
@@ -343,7 +345,7 @@ function GroupRow({
       ) : (
         <button
           onClick={onMatch}
-          className="chip bg-gold/15 text-gold-400 hover:bg-gold/25"
+          className="chip bg-gold/15 text-gold hover:bg-gold/25"
         >
           {t('import.match_manually')}
         </button>
@@ -363,7 +365,7 @@ function PreviewStat({
 }) {
   return (
     <div className="card p-3 text-center">
-      <p className={`text-xl font-extrabold ${warn ? 'text-rose-300' : ''}`}>
+      <p className={`text-xl font-bold ${warn ? 'text-rose-300' : ''}`}>
         {value}
       </p>
       <p className="mt-0.5 text-[11px] text-muted">{label}</p>
@@ -397,7 +399,7 @@ function ErrorCard({
   onRetry,
   retryLabel,
 }: {
-  icon: string;
+  icon: ReactNode;
   title: string;
   body: string;
   onRetry: () => void;
@@ -406,7 +408,7 @@ function ErrorCard({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="card p-8 text-center">
-        <div className="mb-3 text-4xl">{icon}</div>
+        <div className="mb-3 flex justify-center text-muted">{icon}</div>
         <h2 className="text-lg font-bold">{title}</h2>
         <p className="mt-2 text-sm text-muted">{body}</p>
         <button className="btn-gold mt-5" onClick={onRetry}>

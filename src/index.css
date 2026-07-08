@@ -6,15 +6,15 @@
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: 10 10 11;
-  --surface: 14 14 16;
-  --card: 21 21 23;
-  --raised: 28 28 32;
-  --border: 41 41 48;
+  --bg: 10 10 11; /* #0a0a0b */
+  --surface: 20 20 22; /* #141416 */
+  --card: 20 20 22;
+  --raised: 28 28 31;
+  --border: 38 38 42;
   --overlay: 255 255 255;
-  --fg: 244 244 245;
-  --muted: 161 161 170;
-  --faint: 113 113 122;
+  --fg: 245 245 244; /* #f5f5f4 */
+  --muted: 138 138 134; /* #8a8a86 */
+  --faint: 106 106 102;
 }
 
 :root[data-theme='light'] {
@@ -38,22 +38,16 @@ body,
 
 body {
   @apply bg-navy-950 text-fg font-sans antialiased;
-  /* Subtle editorial vignette — no glossy glow. */
-  background-image: radial-gradient(
-    1000px 600px at 15% -5%,
-    rgba(255, 91, 69, 0.06),
-    transparent 55%
-  );
-  background-attachment: fixed;
 }
 
-/* Editorial display headings */
+/* Editorial display headings — distinctive serif */
 h1,
 h2,
 h3,
 .font-display {
-  font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: -0.01em;
+  font-weight: 600;
 }
 
 /* Arabic typography */
@@ -75,7 +69,7 @@ html[dir='rtl'] .rtl-flip {
 
 /* Visible keyboard focus for accessibility (mouse clicks stay clean). */
 :focus-visible {
-  outline: 2px solid rgba(255, 130, 102, 0.8);
+  outline: 2px solid rgba(201, 162, 75, 0.75);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -98,9 +92,9 @@ html[dir='rtl'] .rtl-flip {
       font-semibold transition-all active:scale-[0.97] disabled:opacity-50
       disabled:pointer-events-none select-none;
   }
-  /* Primary (coral) button */
+  /* Primary (amber) button — dark ink on amber, no glow */
   .btn-gold {
-    @apply btn bg-gold text-white hover:bg-gold-600 shadow-gold;
+    @apply btn bg-gold text-navy-950 hover:bg-gold-400;
   }
   .btn-ghost {
     @apply btn bg-overlay/[0.04] text-fg hover:bg-overlay/[0.08]

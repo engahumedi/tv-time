@@ -27,7 +27,7 @@ export function AccountCard() {
               {user.email}
             </p>
             {syncing && (
-              <p className="mt-1 flex items-center gap-1.5 text-xs text-gold-400">
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-gold">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
                 {t('auth.syncing')}
               </p>

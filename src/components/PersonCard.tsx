@@ -1,3 +1,4 @@
+import { User } from 'lucide-react';
 import { img } from '../lib/tmdb';
 import type { Person } from '../lib/tmdb';
 
@@ -16,8 +17,8 @@ export function PersonCard({
         {src ? (
           <img src={src} alt={person.name} className="h-full w-full object-cover" />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-navy-700 text-2xl text-faint">
-            👤
+          <div className="grid h-full w-full place-items-center bg-navy-700 text-faint">
+            <User size={28} strokeWidth={1.5} />
           </div>
         )}
       </div>

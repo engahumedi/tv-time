@@ -76,7 +76,7 @@ export function AuthForm({
               key={m}
               onClick={() => switchMode(m)}
               className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
-                mode === m ? 'bg-gold text-white shadow-gold' : 'text-muted'
+                mode === m ? 'bg-gold text-navy-950' : 'text-muted'
               }`}
             >
               {m === 'in' ? t('auth.sign_in') : t('auth.sign_up')}
@@ -85,7 +85,7 @@ export function AuthForm({
         </div>
       )}
 
-      <h2 className="text-2xl font-extrabold">{title}</h2>
+      <h2 className="text-2xl font-bold">{title}</h2>
       <p className="mt-1 text-sm text-muted">{subtitle}</p>
 
       <form onSubmit={submit} className="mt-5 space-y-3">
@@ -114,7 +114,7 @@ export function AuthForm({
                 <button
                   type="button"
                   onClick={() => switchMode('forgot')}
-                  className="text-xs text-gold-400 hover:underline"
+                  className="text-xs text-gold hover:underline"
                 >
                   {t('auth.forgot')}
                 </button>
@@ -152,7 +152,7 @@ export function AuthForm({
       {mode === 'forgot' && (
         <button
           onClick={() => switchMode('in')}
-          className="mt-4 w-full text-center text-sm text-gold-400 hover:underline"
+          className="mt-4 w-full text-center text-sm text-gold hover:underline"
         >
           {t('auth.back_to_signin')}
         </button>

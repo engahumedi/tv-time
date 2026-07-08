@@ -21,7 +21,7 @@ export function LanguageToggle({ compact = false }: { compact?: boolean }) {
           className={`rounded-full px-3 py-1 font-semibold transition-colors ${
             lang === l
               ? 'bg-gold text-navy-950'
-              : 'text-fg hover:text-white'
+              : 'text-fg hover:text-fg'
           }`}
           aria-pressed={lang === l}
         >

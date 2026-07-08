@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { User } from 'lucide-react';
 import {
   getShowExtras,
   getRecommendations,
@@ -68,7 +69,7 @@ export function ShowExtras({ showId }: { showId: number }) {
                     {src ? (
                       <img src={src} alt={c.name} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="grid h-full w-full place-items-center bg-navy-700 text-xl text-faint">👤</div>
+                      <div className="grid h-full w-full place-items-center bg-navy-700 text-faint"><User size={22} strokeWidth={1.5} /></div>
                     )}
                   </div>
                   <p className="mt-1.5 truncate text-xs font-semibold">{c.name}</p>

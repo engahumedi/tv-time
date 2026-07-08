@@ -48,7 +48,7 @@ export const en = {
       'Add a show from Discover, or import your history from TV Time to see what to watch next.',
     empty_cta: 'Discover shows',
     import_cta: 'Import from TV Time',
-    caught_up_title: 'You’re all caught up! 🎉',
+    caught_up_title: 'You’re all caught up',
     caught_up_body: 'No unwatched episodes right now. Time to find something new.',
     next_episode: 'Next episode',
     aired: 'Aired {{date}}',

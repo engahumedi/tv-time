@@ -18,7 +18,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-overlay/[0.07] bg-navy-900 px-4 py-6 lg:flex">
       <Link to="/" className="mb-8 flex items-center gap-2.5 px-2">
         <Logo />
-        <span className="text-xl font-extrabold tracking-tight">
+        <span className="text-xl font-bold tracking-tight">
           {t('app.name')}
         </span>
       </Link>
@@ -42,9 +42,9 @@ function SideLink({ item, label }: { item: NavItem; label: string }) {
       to={item.to}
       end={item.to === '/'}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
           isActive
-            ? 'bg-gold/10 text-gold-400'
+            ? 'bg-overlay/[0.06] text-gold'
             : 'text-muted hover:bg-overlay/[0.04] hover:text-fg'
         }`
       }
@@ -57,7 +57,7 @@ function SideLink({ item, label }: { item: NavItem; label: string }) {
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth={isActive ? 2.2 : 1.8}
+            strokeWidth={isActive ? 1.9 : 1.6}
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -72,7 +72,7 @@ function SideLink({ item, label }: { item: NavItem; label: string }) {
 
 export function Logo() {
   return (
-    <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-white">
+    <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-navy-950">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
         <path d="M8 5v14l11-7z" />
       </svg>

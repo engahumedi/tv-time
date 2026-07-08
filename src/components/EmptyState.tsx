@@ -7,17 +7,17 @@ interface EmptyStateProps {
   children?: ReactNode;
 }
 
-/** Friendly empty state that tells the user what to do next. */
+/** Friendly empty state — left-aligned and offset, editorial rather than centered. */
 export function EmptyState({ icon, title, body, children }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center px-8 py-16 text-center animate-fade-up">
-      <div className="mb-5 grid h-20 w-20 place-items-center rounded-3xl bg-gold/10 text-4xl text-gold-400">
+    <div className="max-w-md py-14 text-start animate-fade-up">
+      <div className="mb-5 inline-grid h-12 w-12 place-items-center rounded-lg border border-overlay/[0.08] text-gold">
         {icon}
       </div>
-      <h2 className="mb-2 text-xl font-bold text-fg">{title}</h2>
-      <p className="mb-6 max-w-xs text-sm leading-relaxed text-muted">
-        {body}
-      </p>
+      <h2 className="mb-2 font-display text-2xl font-semibold text-fg">{title}</h2>
+      {body && (
+        <p className="mb-6 max-w-sm text-sm leading-relaxed text-muted">{body}</p>
+      )}
       {children}
     </div>
   );

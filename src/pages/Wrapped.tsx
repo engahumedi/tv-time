@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useLibrary, useAllWatches } from '../lib/hooks';
 import { computeStats, breakdownTime } from '../lib/stats';
 import { formatWatchTime, formatNumber } from '../lib/format';
+import { Clapperboard, Download } from 'lucide-react';
 import { downloadShareCard } from '../lib/shareCard';
 import { EmptyState } from '../components/EmptyState';
 
@@ -51,17 +52,17 @@ export function Wrapped() {
   return (
     <div className="pt-2">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold lg:text-4xl">{t('wrapped.title')}</h1>
+        <h1 className="text-3xl font-bold lg:text-4xl">{t('wrapped.title')}</h1>
         <div className="inline-flex rounded-full border border-overlay/10 bg-overlay/5 p-0.5 text-sm">
           <button
             onClick={() => setAllTime(false)}
-            className={`rounded-full px-3 py-1 font-semibold ${!allTime ? 'bg-gold text-white' : 'text-fg'}`}
+            className={`rounded-full px-3 py-1 font-semibold ${!allTime ? 'bg-gold text-navy-950' : 'text-fg'}`}
           >
             {year}
           </button>
           <button
             onClick={() => setAllTime(true)}
-            className={`rounded-full px-3 py-1 font-semibold ${allTime ? 'bg-gold text-white' : 'text-fg'}`}
+            className={`rounded-full px-3 py-1 font-semibold ${allTime ? 'bg-gold text-navy-950' : 'text-fg'}`}
           >
             {t('wrapped.all_time')}
           </button>
@@ -70,14 +71,14 @@ export function Wrapped() {
       <p className="mb-5 text-sm text-muted">{t('wrapped.subtitle', { year })}</p>
 
       {stats.totalEpisodes === 0 ? (
-        <EmptyState icon="🎬" title={t('wrapped.title')} body={t('wrapped.nothing')} />
+        <EmptyState icon={<Clapperboard size={22} strokeWidth={1.5} />} title={t('wrapped.title')} body={t('wrapped.nothing')} />
       ) : (
         <>
           <div
             className="relative overflow-hidden rounded-3xl border border-overlay/[0.07] p-6"
             style={{
               background:
-                'radial-gradient(90% 70% at 15% 0%, rgba(255,91,69,0.22), transparent 60%), #121016',
+                'radial-gradient(90% 70% at 15% 0%, rgba(201,162,75,0.22), transparent 60%), #121016',
             }}
           >
             <div className="grid gap-6 sm:grid-cols-3">
@@ -96,7 +97,8 @@ export function Wrapped() {
           </div>
 
           <button className="btn-gold mt-4 w-full sm:w-auto" onClick={share}>
-            📸 {t('wrapped.share')}
+            <Download size={17} strokeWidth={1.75} />
+            {t('wrapped.share')}
           </button>
         </>
       )}
@@ -107,7 +109,7 @@ export function Wrapped() {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <p className="text-3xl font-extrabold text-gold-400 lg:text-4xl">{value}</p>
+      <p className="text-3xl font-bold text-gold lg:text-4xl">{value}</p>
       <p className="mt-1 text-xs uppercase tracking-wide text-muted">{label}</p>
     </div>
   );

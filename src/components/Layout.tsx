@@ -28,7 +28,7 @@ export function Layout() {
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-overlay/[0.06] bg-navy-950/80 px-4 py-3 backdrop-blur-md lg:hidden">
         <Link to="/" className="flex items-center gap-2">
           <Logo />
-          <span className="text-lg font-extrabold tracking-tight">
+          <span className="text-lg font-bold tracking-tight">
             {t('app.name')}
           </span>
         </Link>

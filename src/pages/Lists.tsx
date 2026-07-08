@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLists, useLibrary } from '../lib/hooks';
 import { createList, deleteList } from '../lib/repo';
+import { Library } from 'lucide-react';
 import { Poster } from '../components/Poster';
 import { EmptyState } from '../components/EmptyState';
 
@@ -23,7 +24,7 @@ export function Lists() {
 
   return (
     <div className="pt-2">
-      <h1 className="mb-4 text-3xl font-extrabold lg:text-4xl">{t('lists.title')}</h1>
+      <h1 className="mb-4 text-3xl font-bold lg:text-4xl">{t('lists.title')}</h1>
 
       <form onSubmit={create} className="mb-6 flex max-w-md gap-2">
         <input
@@ -38,7 +39,7 @@ export function Lists() {
       </form>
 
       {lists && lists.length === 0 && (
-        <EmptyState icon="📚" title={t('lists.empty_title')} body={t('lists.empty_body')} />
+        <EmptyState icon={<Library size={22} strokeWidth={1.5} />} title={t('lists.empty_title')} body={t('lists.empty_body')} />
       )}
 
       <div className="space-y-6">

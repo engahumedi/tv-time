@@ -3,7 +3,7 @@ import type { ShowStatus } from '../types';
 
 const STYLES: Record<ShowStatus, string> = {
   not_started: 'bg-overlay/10 text-fg',
-  watching: 'bg-gold/20 text-gold-400',
+  watching: 'bg-gold/20 text-gold',
   up_to_date: 'bg-emerald-500/20 text-emerald-300',
   finished: 'bg-sky-500/20 text-sky-300',
   stopped: 'bg-rose-500/20 text-rose-300',

@@ -105,31 +105,24 @@ export interface Badge {
   earned: boolean;
   /** 0..1 progress toward earning it. */
   progress: number;
-  icon: string;
 }
 
 /** Milestone badges based on the computed stats. */
 export function computeBadges(stats: Stats): Badge[] {
   const hours = stats.totalMinutes / 60;
-  const mk = (
-    key: string,
-    icon: string,
-    value: number,
-    target: number,
-  ): Badge => ({
+  const mk = (key: string, value: number, target: number): Badge => ({
     key,
-    icon,
     earned: value >= target,
     progress: Math.max(0, Math.min(1, value / target)),
   });
   return [
-    mk('first_steps', '🌱', stats.totalEpisodes, 1),
-    mk('binger', '🍿', stats.totalEpisodes, 100),
-    mk('marathoner', '🏃', stats.totalEpisodes, 500),
-    mk('century', '💯', stats.totalEpisodes, 1000),
-    mk('day_one', '🌗', hours, 24),
-    mk('time_lord', '⏳', hours, 1000),
-    mk('collector', '📚', stats.totalShows, 10),
-    mk('completionist', '🏆', stats.finishedShows, 5),
+    mk('first_steps', stats.totalEpisodes, 1),
+    mk('binger', stats.totalEpisodes, 100),
+    mk('marathoner', stats.totalEpisodes, 500),
+    mk('century', stats.totalEpisodes, 1000),
+    mk('day_one', hours, 24),
+    mk('time_lord', hours, 1000),
+    mk('collector', stats.totalShows, 10),
+    mk('completionist', stats.finishedShows, 5),
   ];
 }

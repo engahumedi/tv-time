@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Search, Film, WifiOff, SearchX } from 'lucide-react';
 import {
   searchShows,
   searchPeople,
@@ -101,20 +102,20 @@ export function Discover() {
 
   return (
     <div className="pt-2">
-      <h1 className="mb-4 text-3xl font-extrabold lg:text-4xl">
+      <h1 className="mb-4 text-3xl font-bold lg:text-4xl">
         {t('discover.title')}
       </h1>
 
       {hasTmdbKey && (
-        <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+        <div className="no-scrollbar -mx-4 mb-5 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:px-0">
           {tabs.map((tb) => (
             <button
               key={tb.key}
               onClick={() => setTab(tb.key)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                 tab === tb.key
-                  ? 'bg-gold text-white'
-                  : 'bg-overlay/[0.05] text-fg hover:bg-overlay/[0.1]'
+                  ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30'
+                  : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'
               }`}
             >
               {tb.label}
@@ -126,7 +127,7 @@ export function Discover() {
       {tab === 'search' && (
         <div className="relative mx-auto mb-5 max-w-2xl lg:mx-0">
           <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-faint">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" strokeLinecap="round" /></svg>
+            <Search size={19} strokeWidth={1.75} />
           </span>
           <input
             value={query}
@@ -146,8 +147,8 @@ export function Discover() {
               onClick={() => setGenreId(g.id)}
               className={`chip ${
                 genreId === g.id
-                  ? 'bg-gold/20 text-gold-400'
-                  : 'bg-overlay/[0.05] text-fg hover:bg-overlay/[0.1]'
+                  ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30'
+                  : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'
               }`}
             >
               {g.name}
@@ -157,7 +158,7 @@ export function Discover() {
       )}
 
       {!hasTmdbKey && (
-        <p className="mb-4 rounded-xl bg-gold/10 px-3 py-2 text-xs text-gold-400">
+        <p className="mb-4 rounded-lg border border-gold/20 bg-gold/[0.06] px-3 py-2 text-xs text-gold">
           {t('discover.demo_notice')}
         </p>
       )}
@@ -165,7 +166,7 @@ export function Discover() {
       {loading && <GridSkeleton />}
 
       {!loading && error && (
-        <EmptyState icon="📡" title={t('errors.search_failed')} body="" />
+        <EmptyState icon={<WifiOff size={22} strokeWidth={1.5} />} title={t('errors.search_failed')} body="" />
       )}
 
       {/* People results (search only) */}
@@ -184,7 +185,7 @@ export function Discover() {
 
       {!loading && !error && results && results.length === 0 && (
         <EmptyState
-          icon={tab === 'search' && query ? '🤔' : '🍿'}
+          icon={tab === 'search' && query ? <SearchX size={22} strokeWidth={1.5} /> : <Film size={22} strokeWidth={1.5} />}
           title={
             tab === 'search' && query
               ? t('discover.no_results', { query })

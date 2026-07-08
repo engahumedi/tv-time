@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { Tv, CalendarClock, Check, ChevronRight, LayoutGrid, List as ListIco } from 'lucide-react';
 import {
   useWatchList,
   useLibrary,
@@ -30,7 +31,7 @@ export function Home() {
 
   if (library.length === 0) {
     return (
-      <EmptyState icon="📺" title={t('home.empty_title')} body={t('home.empty_body')}>
+      <EmptyState icon={<Tv size={22} strokeWidth={1.5} />} title={t('home.empty_title')} body={t('home.empty_body')}>
         <div className="flex flex-col gap-3">
           <button className="btn-gold" onClick={() => navigate('/discover')}>
             {t('home.empty_cta')}
@@ -45,15 +46,17 @@ export function Home() {
 
   return (
     <div className="pt-1">
-      {/* Tabs */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex gap-1 rounded-full bg-overlay/[0.05] p-1">
+      {/* Tabs — underlined, editorial */}
+      <div className="mb-5 flex items-end justify-between border-b border-overlay/[0.08]">
+        <div className="flex gap-6">
           {(['list', 'upcoming'] as const).map((tb) => (
             <button
               key={tb}
               onClick={() => setTab(tb)}
-              className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
-                tab === tb ? 'bg-gold text-white' : 'text-fg hover:text-white'
+              className={`-mb-px border-b-2 pb-2.5 text-sm font-semibold transition-colors ${
+                tab === tb
+                  ? 'border-gold text-fg'
+                  : 'border-transparent text-muted hover:text-fg'
               }`}
             >
               {tb === 'list' ? t('home.watch_list') : t('home.upcoming')}
@@ -63,10 +66,10 @@ export function Home() {
         {tab === 'list' && (
           <button
             onClick={() => setGrid((g) => !g)}
-            className="grid h-9 w-9 place-items-center rounded-lg border border-overlay/10 bg-overlay/[0.04] text-fg hover:text-white"
+            className="mb-1.5 grid h-8 w-8 place-items-center rounded-md text-muted hover:text-fg"
             aria-label={grid ? 'List view' : 'Grid view'}
           >
-            {grid ? <ListIcon /> : <GridIcon />}
+            {grid ? <ListIco size={18} strokeWidth={1.75} /> : <LayoutGrid size={18} strokeWidth={1.75} />}
           </button>
         )}
       </div>
@@ -103,10 +106,12 @@ function WatchListView({
 
   if (items.length === 0) {
     return (
-      <div className="card p-6 text-center">
-        <div className="mb-2 text-4xl">🎉</div>
-        <h3 className="font-bold">{t('home.caught_up_title')}</h3>
-        <p className="mt-1 text-sm text-muted">{t('home.caught_up_body')}</p>
+      <div className="max-w-md py-10 text-start">
+        <div className="mb-4 inline-grid h-12 w-12 place-items-center rounded-lg border border-overlay/[0.08] text-gold">
+          <Check size={22} strokeWidth={1.75} />
+        </div>
+        <h3 className="font-display text-2xl font-semibold">{t('home.caught_up_title')}</h3>
+        <p className="mt-1.5 text-sm text-muted">{t('home.caught_up_body')}</p>
       </div>
     );
   }
@@ -131,7 +136,7 @@ function Section({ label, items }: { label: string; items: WatchListItem[] }) {
   return (
     <section>
       <div className="mb-3 flex">
-        <span className="rounded-full bg-overlay/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-fg">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-muted">
           {label}
         </span>
       </div>
@@ -164,7 +169,7 @@ function WatchRow({ item }: { item: WatchListItem }) {
         ) : (
           <div
             className="h-full w-full"
-            style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(255,91,69,0.25), transparent 60%), #15131a' }}
+            style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(201,162,75,0.25), transparent 60%), #15131a' }}
           />
         )}
       </Link>
@@ -176,9 +181,9 @@ function WatchRow({ item }: { item: WatchListItem }) {
             className="inline-flex max-w-full items-center gap-1 rounded-full border border-overlay/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-fg hover:border-gold/60"
           >
             <span className="truncate">{show.name}</span>
-            <svg className="rtl-flip shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+            <ChevronRight size={12} strokeWidth={2.25} className="rtl-flip shrink-0" />
           </Link>
-          <p className="mt-1.5 text-base font-extrabold">
+          <p className="mt-1.5 text-base font-bold">
             S{String(episode.seasonNumber).padStart(2, '0')} | E
             {String(episode.episodeNumber).padStart(2, '0')}
             {remaining > 0 && (
@@ -189,7 +194,7 @@ function WatchRow({ item }: { item: WatchListItem }) {
           </p>
           <p className="truncate text-sm text-muted">{episode.name}</p>
           {isPremiere && (
-            <span className="mt-1.5 inline-block rounded bg-gold px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white">
+            <span className="mt-1.5 inline-block rounded bg-gold/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold">
               {t('home.premiere')}
             </span>
           )}
@@ -197,11 +202,11 @@ function WatchRow({ item }: { item: WatchListItem }) {
 
         <button
           onClick={onWatch}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-overlay/10 text-fg transition-all hover:bg-gold hover:text-white active:scale-90"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-overlay/[0.12] text-muted transition-all hover:border-gold hover:bg-gold hover:text-navy-950 active:scale-90"
           aria-label={t('show.mark_watched')}
           title={t('show.mark_watched')}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+          <Check size={20} strokeWidth={2.25} />
         </button>
       </div>
     </motion.div>
@@ -219,7 +224,7 @@ function UpcomingView({ lang }: { lang: string }) {
   if (future.length === 0) {
     return (
       <EmptyState
-        icon="🗓️"
+        icon={<CalendarClock size={22} strokeWidth={1.5} />}
         title={t('home.upcoming_empty_title')}
         body={t('home.upcoming_empty_body')}
       />
@@ -238,7 +243,7 @@ function UpcomingView({ lang }: { lang: string }) {
       {groups.map((g) => (
         <section key={g.key}>
           <div className="mb-3 flex">
-            <span className="rounded-full bg-overlay/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-fg">
+            <span className="text-xs font-semibold uppercase tracking-[0.15em] text-muted">
               {g.label}
             </span>
           </div>
@@ -265,34 +270,23 @@ function UpcomingRow({ item, lang }: { item: CalendarItem; lang: string }) {
         {thumb ? (
           <img src={thumb} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full" style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(255,91,69,0.2), transparent 60%), #15131a' }} />
+          <div className="h-full w-full" style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(201,162,75,0.2), transparent 60%), #15131a' }} />
         )}
       </div>
       <div className="min-w-0 flex-1 p-3">
         <p className="truncate text-xs font-bold uppercase tracking-wide text-fg">
           {show.name}
         </p>
-        <p className="mt-1 text-base font-extrabold">
+        <p className="mt-1 text-base font-bold">
           S{String(episode.seasonNumber).padStart(2, '0')} | E
           {String(episode.episodeNumber).padStart(2, '0')}
         </p>
         <p className="truncate text-sm text-muted">{episode.name}</p>
-        <p className="mt-1 text-xs font-semibold text-gold-400">
+        <p className="mt-1 text-xs font-semibold text-gold">
           {formatDate(ts, lang)}
         </p>
       </div>
     </Link>
-  );
-}
-
-function GridIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
-  );
-}
-function ListIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
   );
 }
 

@@ -17,28 +17,32 @@ export default {
         fg: 'rgb(var(--fg) / <alpha-value>)',
         muted: 'rgb(var(--muted) / <alpha-value>)',
         faint: 'rgb(var(--faint) / <alpha-value>)',
-        // Coral accent (same in both themes).
+        // Muted amber accent (same in both themes) — used only for small touches.
         gold: {
-          DEFAULT: '#ff5b45',
-          400: '#ff8266',
-          500: '#ff5b45',
-          600: '#f0432c',
-          700: '#c9331e',
+          DEFAULT: '#c9a24b',
+          400: '#d6b56c',
+          500: '#c9a24b',
+          600: '#b08a38',
+          700: '#8f6f2e',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'Segoe UI', 'sans-serif'],
-        display: ['"Bricolage Grotesque"', 'Inter', 'system-ui', 'sans-serif'],
+        // Clean grotesque for body, distinctive serif for headings.
+        sans: ['Geist', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['Fraunces', 'Georgia', 'serif'],
         arabic: ['"IBM Plex Sans Arabic"', '"Segoe UI"', 'Tahoma', 'sans-serif'],
       },
       borderRadius: {
-        '2xl': '1.1rem',
-        '3xl': '1.5rem',
+        // De-carded: restrained radii, nothing softer than 8px on panels.
+        lg: '0.375rem',
+        xl: '0.5rem',
+        '2xl': '0.5rem',
+        '3xl': '0.625rem',
       },
       boxShadow: {
-        soft: '0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35)',
-        lift: '0 12px 40px rgba(0,0,0,0.5)',
-        gold: '0 6px 20px rgba(255,91,69,0.35)',
+        // Neutral depth only — no coloured glows.
+        soft: '0 1px 2px rgba(0,0,0,0.4)',
+        lift: '0 16px 48px rgba(0,0,0,0.55)',
       },
       keyframes: {
         'pop-in': {

@@ -26,7 +26,7 @@ export function Settings() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 pt-2">
-      <h1 className="text-3xl font-extrabold lg:text-4xl">{t('settings.title')}</h1>
+      <h1 className="text-3xl font-bold lg:text-4xl">{t('settings.title')}</h1>
 
       {/* Account */}
       <AccountCard />
@@ -44,7 +44,7 @@ export function Settings() {
                 key={tm}
                 onClick={() => chooseTheme(tm)}
                 className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
-                  theme === tm ? 'bg-gold text-white' : 'text-muted'
+                  theme === tm ? 'bg-gold text-navy-950' : 'text-muted'
                 }`}
               >
                 {t(`settings.${tm}`)}

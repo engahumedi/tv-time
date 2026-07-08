@@ -18,7 +18,7 @@ export function ShowCard({
       to={`/show/${show.id}`}
       className={`group block ${width} animate-fade-up`}
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl shadow-soft ring-1 ring-overlay/[0.06] transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lift group-hover:ring-gold/50">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-lg ring-1 ring-overlay/[0.08] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-overlay/25">
         <Poster
           path={show.posterPath}
           alt={show.name}

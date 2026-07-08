@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Frown } from 'lucide-react';
 import { getShowDetail, getAllEpisodes, img } from '../lib/tmdb';
 import {
   useShow,
@@ -109,8 +110,8 @@ export function ShowDetail() {
   if (loading && !show) return <DetailSkeleton />;
   if (error || !show) {
     return (
-      <div className="pt-16 text-center">
-        <p className="text-4xl">😕</p>
+      <div className="flex flex-col items-center pt-16 text-center">
+        <Frown size={36} strokeWidth={1.5} className="text-muted" />
         <p className="mt-3 text-fg">{t('errors.load_failed')}</p>
         <button className="btn-ghost mt-4" onClick={() => navigate(-1)}>
           {t('common.close')}
@@ -176,7 +177,7 @@ export function ShowDetail() {
             className="h-full w-full"
             style={{
               background:
-                'radial-gradient(120% 90% at 50% -10%, rgba(255,91,69,0.28), transparent 55%), #111015',
+                'radial-gradient(120% 90% at 50% -10%, rgba(201,162,75,0.28), transparent 55%), #111015',
             }}
           />
         )}
@@ -193,7 +194,7 @@ export function ShowDetail() {
             />
           </div>
           <div className="flex-1 pt-16 lg:pt-32">
-            <h1 className="text-xl font-extrabold leading-tight lg:text-4xl">{show.name}</h1>
+            <h1 className="text-xl font-bold leading-tight lg:text-4xl">{show.name}</h1>
             <p className="mt-1 text-sm text-muted lg:mt-2 lg:text-base">
               {show.firstAirDate?.slice(0, 4)}
               {show.numberOfSeasons
@@ -327,7 +328,7 @@ export function ShowDetail() {
             </form>
             <button
               onClick={() => setShowLists(true)}
-              className="chip bg-gold/15 text-gold-400 hover:bg-gold/25"
+              className="chip bg-gold/15 text-gold hover:bg-gold/25"
             >
               + {t('show.add_to_list')}
             </button>
@@ -514,7 +515,7 @@ function SeasonBlock({
                   celebrate('big'),
                 );
               }}
-              className="chip cursor-pointer bg-gold/15 text-gold-400 hover:bg-gold/25"
+              className="chip cursor-pointer bg-gold/15 text-gold hover:bg-gold/25"
             >
               {t('show.mark_season_watched')}
             </span>
@@ -563,7 +564,7 @@ function SeasonBlock({
                     onClick={() => onToggle(ep)}
                     className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-all active:scale-90 ${
                       isWatched
-                        ? 'border-gold bg-gold text-white'
+                        ? 'border-gold bg-gold text-navy-950'
                         : 'border-overlay/20 text-transparent hover:border-gold/60'
                     } ${!inLibrary ? 'opacity-40' : ''}`}
                     aria-label={t('show.mark_watched')}

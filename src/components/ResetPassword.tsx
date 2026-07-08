@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { Logo } from './Sidebar';
 
@@ -35,14 +36,14 @@ export function ResetPassword() {
     <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center px-6 py-16">
       <div className="mb-6 flex items-center justify-center gap-3">
         <Logo />
-        <span className="text-2xl font-extrabold tracking-tight">{t('app.name')}</span>
+        <span className="text-2xl font-bold tracking-tight">{t('app.name')}</span>
       </div>
 
       <div className="card p-6 shadow-lift">
         {done ? (
           <div className="text-center">
-            <div className="mb-3 text-4xl">✅</div>
-            <h2 className="text-xl font-extrabold">{t('auth.password_updated')}</h2>
+            <CheckCircle2 size={40} strokeWidth={1.5} className="mx-auto mb-3 text-gold" />
+            <h2 className="text-xl font-bold">{t('auth.password_updated')}</h2>
             <button
               className="btn-gold mt-5 w-full"
               onClick={() => window.location.reload()}
@@ -52,7 +53,7 @@ export function ResetPassword() {
           </div>
         ) : (
           <>
-            <h2 className="text-2xl font-extrabold">{t('auth.reset_title')}</h2>
+            <h2 className="text-2xl font-bold">{t('auth.reset_title')}</h2>
             <p className="mt-1 text-sm text-muted">{t('auth.reset_sub')}</p>
             <form onSubmit={submit} className="mt-5 space-y-3">
               <input

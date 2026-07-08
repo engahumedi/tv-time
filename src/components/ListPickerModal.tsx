@@ -32,7 +32,7 @@ export function ListPickerModal({
         className="glass-strong w-full max-w-sm rounded-t-3xl p-5 sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-extrabold">{t('lists.manage')}</h2>
+        <h2 className="mb-4 text-lg font-bold">{t('lists.manage')}</h2>
 
         <div className="max-h-64 space-y-1.5 overflow-y-auto">
           {(lists ?? []).map((l) => {
@@ -46,7 +46,7 @@ export function ListPickerModal({
                 <span className="min-w-0 flex-1 truncate font-medium">{l.name}</span>
                 <span
                   className={`grid h-6 w-6 place-items-center rounded-full border ${
-                    inList ? 'border-gold bg-gold text-white' : 'border-overlay/20'
+                    inList ? 'border-gold bg-gold text-navy-950' : 'border-overlay/20'
                   }`}
                 >
                   {inList && (

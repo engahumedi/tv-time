@@ -33,8 +33,8 @@ export function downloadShareCard(d: CardData, filename = 'showtrack.png'): void
   ctx.fillRect(0, 0, S, S);
   // Coral glow
   const glow = ctx.createRadialGradient(S * 0.2, 0, 0, S * 0.2, 0, S * 0.8);
-  glow.addColorStop(0, 'rgba(255,91,69,0.28)');
-  glow.addColorStop(1, 'rgba(255,91,69,0)');
+  glow.addColorStop(0, 'rgba(201,162,75,0.28)');
+  glow.addColorStop(1, 'rgba(201,162,75,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, S, S);
 
@@ -54,7 +54,7 @@ export function downloadShareCard(d: CardData, filename = 'showtrack.png'): void
   ];
   let y = 340;
   for (const [value, label] of rows) {
-    ctx.fillStyle = '#ff8266';
+    ctx.fillStyle = '#d6b56c';
     ctx.font = '800 110px Inter, system-ui, sans-serif';
     ctx.fillText(value, pad, y);
     ctx.fillStyle = '#a1a1aa';
@@ -72,7 +72,7 @@ export function downloadShareCard(d: CardData, filename = 'showtrack.png'): void
   ctx.fillText(truncate(ctx, d.topShow, S - pad * 2), pad, S - 95);
 
   // Brand
-  ctx.fillStyle = '#ff5b45';
+  ctx.fillStyle = '#c9a24b';
   ctx.font = '800 34px Inter, system-ui, sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText('▶ ' + d.brand, S - pad, 180);

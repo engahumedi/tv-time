@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { Film, Check } from 'lucide-react';
 import { img } from '../lib/tmdb';
 import { useWatch } from '../lib/hooks';
 import { useEffect, useRef, useState } from 'react';
@@ -75,8 +76,8 @@ export function EpisodeModal({
           {still ? (
             <img src={still} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-4xl text-faint">
-              🎬
+            <div className="flex h-full w-full items-center justify-center text-faint">
+              <Film size={36} strokeWidth={1.25} />
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-navy-900 to-transparent" />
@@ -88,10 +89,10 @@ export function EpisodeModal({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
           </button>
           <div className="absolute inset-x-0 bottom-0 p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-gold-400">
+            <p className="text-xs font-bold uppercase tracking-wide text-gold">
               S{episode.seasonNumber} · E{episode.episodeNumber}
             </p>
-            <h2 className="text-lg font-extrabold leading-tight">{episode.name}</h2>
+            <h2 className="text-lg font-bold leading-tight">{episode.name}</h2>
           </div>
         </div>
 
@@ -154,7 +155,8 @@ export function EpisodeModal({
                 onClick={toggleWatched}
                 className={isWatched ? 'btn-ghost w-full' : 'btn-gold w-full'}
               >
-                {isWatched ? `✓ ${t('episode.watched')}` : t('episode.mark_watched')}
+                {isWatched && <Check size={17} strokeWidth={2} />}
+                {isWatched ? t('episode.watched') : t('episode.mark_watched')}
               </button>
             </>
           )}

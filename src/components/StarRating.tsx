@@ -7,7 +7,7 @@ function Star({ fill, size }: { fill: number; size: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
       <defs>
         <linearGradient id={id}>
-          <stop offset={`${fill * 100}%`} stopColor="#ff8266" />
+          <stop offset={`${fill * 100}%`} stopColor="#d6b56c" />
           <stop offset={`${fill * 100}%`} stopColor="rgba(255,255,255,0.14)" />
         </linearGradient>
       </defs>

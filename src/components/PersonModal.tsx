@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { User } from 'lucide-react';
 import { getPersonCredits, img, type Person } from '../lib/tmdb';
 import { ShowCard } from './ShowCard';
 import type { Show } from '../types';
@@ -40,11 +41,11 @@ export function PersonModal({
             {src ? (
               <img src={src} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div className="grid h-full w-full place-items-center bg-navy-700 text-2xl">👤</div>
+              <div className="grid h-full w-full place-items-center bg-navy-700 text-faint"><User size={26} strokeWidth={1.5} /></div>
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-xl font-extrabold">{person.name}</h2>
+            <h2 className="truncate text-xl font-bold">{person.name}</h2>
             {person.knownFor && (
               <p className="text-xs text-muted">
                 {t('discover.known_for')}: {person.knownFor}
