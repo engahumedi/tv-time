@@ -43,9 +43,9 @@ export function Home() {
     <div className="space-y-8 pt-2">
       <section>
         <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-2xl font-extrabold">{t('home.title')}</h1>
+          <h1 className="text-3xl font-extrabold lg:text-4xl">{t('home.title')}</h1>
         </div>
-        <p className="mb-4 text-sm text-slate-400">{t('home.subtitle')}</p>
+        <p className="mb-5 text-sm text-zinc-400">{t('home.subtitle')}</p>
 
         {toWatch.length === 0 ? (
           <div className="card p-6 text-center animate-fade-up">
@@ -59,7 +59,7 @@ export function Home() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {toWatch.map(({ show, episode }) => (
               <UpNextCard
                 key={show.id}
@@ -74,10 +74,10 @@ export function Home() {
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold">{t('discover.in_library')}</h2>
+          <h2 className="text-xl font-bold">{t('discover.in_library')}</h2>
         </div>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {library.slice(0, 12).map((s) => (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+          {library.slice(0, 21).map((s) => (
             <ShowCard key={s.id} show={s} />
           ))}
         </div>

@@ -1,30 +1,49 @@
 import { Outlet, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BottomNav } from './BottomNav';
+import { Sidebar, Logo } from './Sidebar';
 import { LanguageToggle } from './LanguageToggle';
 
-/** App shell: top brand bar, routed content, and the bottom nav. */
+/**
+ * Responsive app shell.
+ * - lg+ : persistent left sidebar, wide centered content area.
+ * - < lg: compact top bar + bottom tab bar (mobile app feel).
+ */
 export function Layout() {
   const { t } = useTranslation();
   return (
-    <div className="mx-auto flex min-h-full max-w-lg flex-col">
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 backdrop-blur-md">
+    <div className="min-h-full">
+      <Sidebar />
+
+      {/* Mobile top bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/[0.06] bg-navy-950/80 px-4 py-3 backdrop-blur-md lg:hidden">
         <Link to="/" className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-navy-950">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
+          <Logo />
           <span className="text-lg font-extrabold tracking-tight">
             {t('app.name')}
           </span>
         </Link>
-        <LanguageToggle compact />
+        <div className="flex items-center gap-2">
+          <Link
+            to="/import"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-zinc-300"
+            aria-label={t('nav.import')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v12" />
+              <path d="m8 11 4 4 4-4" />
+              <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+            </svg>
+          </Link>
+          <LanguageToggle compact />
+        </div>
       </header>
 
-      <main className="flex-1 px-4 pb-28">
-        <Outlet />
-      </main>
+      <div className="lg:ps-60">
+        <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-2 lg:px-10 lg:pb-12 lg:pt-8">
+          <Outlet />
+        </main>
+      </div>
 
       <BottomNav />
     </div>

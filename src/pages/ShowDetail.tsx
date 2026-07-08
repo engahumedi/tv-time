@@ -120,9 +120,9 @@ export function ShowDetail() {
   }
 
   return (
-    <div className="-mx-4">
+    <div className="-mx-4 lg:-mx-10">
       {/* Backdrop hero */}
-      <div className="relative h-56 w-full overflow-hidden">
+      <div className="relative h-56 w-full overflow-hidden lg:h-[22rem]">
         {show.backdropPath ? (
           <img
             src={img(show.backdropPath, 'w780') ?? ''}
@@ -144,18 +144,18 @@ export function ShowDetail() {
         </button>
       </div>
 
-      <div className="px-4">
-        <div className="-mt-16 flex gap-4">
-          <div className="w-28 shrink-0">
+      <div className="mx-auto max-w-4xl px-4 lg:px-10">
+        <div className="-mt-16 flex gap-4 lg:-mt-28 lg:gap-6">
+          <div className="w-28 shrink-0 lg:w-48">
             <Poster
               path={show.posterPath}
               alt={show.name}
-              className="aspect-[2/3] rounded-xl ring-1 ring-white/10 shadow-glass"
+              className="aspect-[2/3] rounded-xl ring-1 ring-white/10 shadow-lift"
             />
           </div>
-          <div className="flex-1 pt-16">
-            <h1 className="text-xl font-extrabold leading-tight">{show.name}</h1>
-            <p className="mt-1 text-sm text-slate-400">
+          <div className="flex-1 pt-16 lg:pt-32">
+            <h1 className="text-xl font-extrabold leading-tight lg:text-4xl">{show.name}</h1>
+            <p className="mt-1 text-sm text-zinc-400 lg:mt-2 lg:text-base">
               {show.firstAirDate?.slice(0, 4)}
               {show.numberOfSeasons
                 ? ` · ${show.numberOfSeasons} ${t('common.seasons')}`

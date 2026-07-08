@@ -49,11 +49,11 @@ export function Discover() {
 
   return (
     <div className="pt-2">
-      <h1 className="mb-3 text-2xl font-extrabold">{t('discover.title')}</h1>
+      <h1 className="mb-4 text-3xl font-extrabold lg:text-4xl">{t('discover.title')}</h1>
 
-      <div className="sticky top-14 z-20 -mx-4 mb-4 bg-navy-950/80 px-4 py-2 backdrop-blur-md">
-        <div className="relative">
-          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-slate-500">
+      <div className="sticky top-[60px] z-20 -mx-4 mb-5 bg-navy-950/85 px-4 py-2 backdrop-blur-md lg:top-0 lg:-mx-10 lg:px-10 lg:py-3">
+        <div className="relative mx-auto max-w-2xl lg:mx-0">
+          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-zinc-500">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" strokeLinecap="round" />
@@ -63,7 +63,7 @@ export function Discover() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('discover.placeholder')}
-            className="w-full rounded-2xl border border-white/10 bg-navy-800/70 py-3 ps-11 pe-4 text-base outline-none transition-colors placeholder:text-slate-500 focus:border-gold/50"
+            className="w-full rounded-2xl border border-white/[0.08] bg-navy-800 py-3 ps-11 pe-4 text-base outline-none transition-colors placeholder:text-zinc-500 focus:border-gold/60"
             autoFocus
           />
         </div>
@@ -98,7 +98,7 @@ export function Discover() {
       )}
 
       {!loading && results && results.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
           {results.map((s) => (
             <ShowCard
               key={s.id}

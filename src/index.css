@@ -13,54 +13,78 @@ body,
 }
 
 body {
-  @apply bg-navy-950 text-slate-100 font-sans antialiased;
+  @apply bg-navy-950 text-zinc-100 font-sans antialiased;
+  /* Subtle editorial vignette — no glossy glow. */
   background-image: radial-gradient(
-      1200px 600px at 50% -10%,
-      rgba(36, 51, 82, 0.55),
-      transparent 60%
-    ),
-    radial-gradient(800px 400px at 100% 0%, rgba(232, 184, 75, 0.06), transparent 55%);
+    1000px 600px at 15% -5%,
+    rgba(255, 91, 69, 0.06),
+    transparent 55%
+  );
   background-attachment: fixed;
 }
 
-/* Arabic font when RTL */
-html[dir='rtl'] body {
-  @apply font-arabic;
+/* Editorial display headings */
+h1,
+h2,
+h3,
+.font-display {
+  font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }
 
-/* Flip directional utilities are handled by Tailwind logical props where used;
-   for icons that must flip in RTL, add the `.rtl-flip` class. */
+/* Arabic typography */
+html[dir='rtl'] body {
+  font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+}
+html[dir='rtl'] h1,
+html[dir='rtl'] h2,
+html[dir='rtl'] h3,
+html[dir='rtl'] .font-display {
+  font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  letter-spacing: 0;
+}
+
+/* Flip directional icons in RTL */
 html[dir='rtl'] .rtl-flip {
   transform: scaleX(-1);
 }
 
 @layer components {
-  .glass {
-    @apply bg-navy-800/60 backdrop-blur-md border border-white/5 shadow-glass;
+  /* Flat surfaces with hairline borders — replaces the old glass look. */
+  .surface {
+    @apply bg-navy-800 border border-white/[0.07];
   }
+  .glass,
   .glass-strong {
-    @apply bg-navy-800/80 backdrop-blur-xl border border-white/10 shadow-glass;
+    @apply bg-navy-800/95 backdrop-blur-md border border-white/[0.07];
   }
+  .card {
+    @apply bg-navy-800 border border-white/[0.07] rounded-2xl;
+  }
+
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
-      font-semibold transition-all active:scale-95 disabled:opacity-50
+      font-semibold transition-all active:scale-[0.97] disabled:opacity-50
       disabled:pointer-events-none select-none;
   }
+  /* Primary (coral) button */
   .btn-gold {
-    @apply btn bg-gold text-navy-950 hover:bg-gold-400 shadow-gold;
+    @apply btn bg-gold text-white hover:bg-gold-600 shadow-gold;
   }
   .btn-ghost {
-    @apply btn bg-white/5 text-slate-100 hover:bg-white/10 border border-white/10;
+    @apply btn bg-white/[0.04] text-zinc-100 hover:bg-white/[0.08]
+      border border-white/[0.08];
   }
   .chip {
     @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
   }
-  .card {
-    @apply glass rounded-2xl;
+  .input {
+    @apply w-full rounded-xl border border-white/[0.08] bg-navy-700 px-4 py-2.5
+      text-base outline-none transition-colors placeholder:text-zinc-500
+      focus:border-gold/60;
   }
 }
 
-/* Hide scrollbars on horizontal poster rails but keep them scrollable. */
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -94,7 +118,6 @@ html[dir='rtl'] .rtl-flip {
   }
 }
 
-/* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

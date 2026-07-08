@@ -1,6 +1,6 @@
 export const en = {
   app: { name: 'ShowTrack', tagline: 'Track your TV world' },
-  nav: { home: 'Home', discover: 'Discover', profile: 'Profile' },
+  nav: { home: 'Home', discover: 'Discover', profile: 'Profile', import: 'Import' },
   common: {
     add: 'Add',
     added: 'Added',

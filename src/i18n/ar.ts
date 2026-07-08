@@ -2,7 +2,7 @@ import type { Translation } from './en';
 
 export const ar: Translation = {
   app: { name: 'شو تراك', tagline: 'تابِع عالم مسلسلاتك' },
-  nav: { home: 'الرئيسية', discover: 'استكشف', profile: 'حسابي' },
+  nav: { home: 'الرئيسية', discover: 'استكشف', profile: 'حسابي', import: 'استيراد' },
   common: {
     add: 'أضِف',
     added: 'أُضيف',

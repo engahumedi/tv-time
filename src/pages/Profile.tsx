@@ -18,8 +18,8 @@ import { Poster } from '../components/Poster';
 import { exportData, exportWatchesCsv, triggerDownload } from '../lib/exporter';
 import { clearAll } from '../lib/repo';
 
-const GOLD = '#e8b84b';
-const GOLD_DIM = 'rgba(232,184,75,0.35)';
+const GOLD = '#ff5b45';
+const GOLD_DIM = 'rgba(255,91,69,0.32)';
 
 export function Profile() {
   const { t, i18n } = useTranslation();
@@ -40,7 +40,7 @@ export function Profile() {
 
   return (
     <div className="space-y-6 pt-2">
-      <h1 className="text-2xl font-extrabold">{t('profile.title')}</h1>
+      <h1 className="text-3xl font-extrabold lg:text-4xl">{t('profile.title')}</h1>
 
       {!hasData ? (
         <EmptyState
@@ -54,20 +54,18 @@ export function Profile() {
         </EmptyState>
       ) : (
         <>
-          {/* Hero time-watched */}
-          <div className="card overflow-hidden p-5 text-center">
-            <p className="text-xs uppercase tracking-widest text-slate-400">
-              {t('profile.time_watched')}
-            </p>
-            <div className="mt-2 flex items-end justify-center gap-4">
-              <TimeUnit value={time.days} label={t('common.days')} lang={lang} />
-              <TimeUnit value={time.hours} label={t('common.hours')} lang={lang} />
-              <TimeUnit value={time.minutes} label={t('common.minutes')} lang={lang} />
+          {/* Hero + stat tiles */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="card overflow-hidden p-5 text-center sm:col-span-2 sm:flex sm:flex-col sm:justify-center">
+              <p className="text-xs uppercase tracking-widest text-zinc-400">
+                {t('profile.time_watched')}
+              </p>
+              <div className="mt-2 flex items-end justify-center gap-5">
+                <TimeUnit value={time.days} label={t('common.days')} lang={lang} />
+                <TimeUnit value={time.hours} label={t('common.hours')} lang={lang} />
+                <TimeUnit value={time.minutes} label={t('common.minutes')} lang={lang} />
+              </div>
             </div>
-          </div>
-
-          {/* Stat tiles */}
-          <div className="grid grid-cols-2 gap-3">
             <StatTile
               value={formatNumber(stats.totalEpisodes, lang)}
               label={t('profile.episodes_watched')}
@@ -78,6 +76,8 @@ export function Profile() {
             />
           </div>
 
+          {/* Charts */}
+          <div className="grid gap-4 lg:grid-cols-2">
           {/* Episodes per month */}
           <section className="card p-4">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">
@@ -144,6 +144,7 @@ export function Profile() {
               </ResponsiveContainer>
             </section>
           )}
+          </div>
 
           {/* Top shows */}
           {stats.topShows.length > 0 && (
