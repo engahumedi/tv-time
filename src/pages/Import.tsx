@@ -107,7 +107,7 @@ export function Import() {
     <div className="space-y-5 pt-2">
       <div>
         <h1 className="text-2xl font-extrabold">{t('import.title')}</h1>
-        <p className="mt-1 text-sm text-slate-400">{t('import.subtitle')}</p>
+        <p className="mt-1 text-sm text-muted">{t('import.subtitle')}</p>
       </div>
 
       <AnimatePresence mode="wait">
@@ -124,12 +124,12 @@ export function Import() {
               className={`flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-16 text-center transition-colors ${
                 dragging
                   ? 'border-gold bg-gold/10'
-                  : 'border-white/15 bg-white/[0.02] hover:border-gold/40'
+                  : 'border-overlay/15 bg-overlay/[0.02] hover:border-gold/40'
               }`}
             >
               <div className="mb-4 text-5xl">📦</div>
               <p className="font-bold">{t('import.dropzone_title')}</p>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-muted">
                 {t('import.dropzone_body')}
               </p>
               <span className="btn-gold mt-5">{t('import.browse')}</span>
@@ -155,7 +155,7 @@ export function Import() {
               {stage === 'matching' && progress.total > 0 && (
                 <div className="mt-4 w-full max-w-xs">
                   <ProgressBar done={progress.done} total={progress.total} />
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-faint">
                     {progress.done} / {progress.total}
                   </p>
                 </div>
@@ -177,7 +177,7 @@ export function Import() {
             </div>
 
             {ignoredFiles.length > 0 && (
-              <p className="rounded-xl bg-white/5 px-3 py-2 text-xs text-slate-400">
+              <p className="rounded-xl bg-overlay/5 px-3 py-2 text-xs text-muted">
                 {t('import.ignored_files', { files: ignoredFiles.join(', ') })}
               </p>
             )}
@@ -240,14 +240,14 @@ export function Import() {
             <div className="card p-8 text-center">
               <div className="mb-3 text-5xl">🎉</div>
               <h2 className="text-xl font-extrabold">{t('import.done_title')}</h2>
-              <p className="mt-3 text-slate-300">
+              <p className="mt-3 text-fg">
                 {t('import.done_body', {
                   episodes: formatNumber(summary.episodesImported, i18n.language),
                   time: formatWatchTime(summary.totalMinutes, t),
                 })}
               </p>
               {summary.duplicatesSkipped > 0 && (
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-faint">
                   {t('import.done_duplicates', {
                     count: summary.duplicatesSkipped,
                   })}
@@ -320,7 +320,7 @@ function GroupRow({
             className="h-full w-full rounded-md"
           />
         ) : (
-          <div className="grid h-full w-full place-items-center rounded-md bg-navy-700 text-slate-500">
+          <div className="grid h-full w-full place-items-center rounded-md bg-navy-700 text-faint">
             ?
           </div>
         )}
@@ -329,7 +329,7 @@ function GroupRow({
         <p className="truncate font-semibold">
           {group.match?.name ?? group.seriesName}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-faint">
           {group.match && group.match.name !== group.seriesName
             ? `${group.seriesName} · `
             : ''}
@@ -366,7 +366,7 @@ function PreviewStat({
       <p className={`text-xl font-extrabold ${warn ? 'text-rose-300' : ''}`}>
         {value}
       </p>
-      <p className="mt-0.5 text-[11px] text-slate-400">{label}</p>
+      <p className="mt-0.5 text-[11px] text-muted">{label}</p>
     </div>
   );
 }
@@ -374,7 +374,7 @@ function PreviewStat({
 function ProgressBar({ done, total }: { done: number; total: number }) {
   const pct = total ? (done / total) * 100 : 0;
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-white/10">
+    <div className="h-2 overflow-hidden rounded-full bg-overlay/10">
       <motion.div
         className="h-full rounded-full bg-gold"
         animate={{ width: `${pct}%` }}
@@ -386,7 +386,7 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
 
 function Spinner() {
   return (
-    <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-white/10 border-t-gold" />
+    <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-overlay/10 border-t-gold" />
   );
 }
 
@@ -408,7 +408,7 @@ function ErrorCard({
       <div className="card p-8 text-center">
         <div className="mb-3 text-4xl">{icon}</div>
         <h2 className="text-lg font-bold">{title}</h2>
-        <p className="mt-2 text-sm text-slate-400">{body}</p>
+        <p className="mt-2 text-sm text-muted">{body}</p>
         <button className="btn-gold mt-5" onClick={onRetry}>
           {retryLabel}
         </button>

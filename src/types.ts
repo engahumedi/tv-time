@@ -31,6 +31,8 @@ export interface Show {
   userRating?: number;
   /** Free-form tags the user attached to the show. */
   tags?: string[];
+  /** Marked as a favourite (shown on the profile). */
+  favorite?: boolean;
   /** User-controlled status. */
   status: ShowStatus;
   /** When the show was added to the library. */

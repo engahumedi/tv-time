@@ -26,7 +26,7 @@ export function Wrapped() {
     [shows, watches],
   );
 
-  if (!stats) return <div className="pt-16 text-center text-zinc-500">{t('common.loading')}</div>;
+  if (!stats) return <div className="pt-16 text-center text-faint">{t('common.loading')}</div>;
 
   const time = breakdownTime(stats.totalMinutes);
   const topShow = stats.topShows[0];
@@ -52,29 +52,29 @@ export function Wrapped() {
     <div className="pt-2">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold lg:text-4xl">{t('wrapped.title')}</h1>
-        <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-0.5 text-sm">
+        <div className="inline-flex rounded-full border border-overlay/10 bg-overlay/5 p-0.5 text-sm">
           <button
             onClick={() => setAllTime(false)}
-            className={`rounded-full px-3 py-1 font-semibold ${!allTime ? 'bg-gold text-white' : 'text-zinc-300'}`}
+            className={`rounded-full px-3 py-1 font-semibold ${!allTime ? 'bg-gold text-white' : 'text-fg'}`}
           >
             {year}
           </button>
           <button
             onClick={() => setAllTime(true)}
-            className={`rounded-full px-3 py-1 font-semibold ${allTime ? 'bg-gold text-white' : 'text-zinc-300'}`}
+            className={`rounded-full px-3 py-1 font-semibold ${allTime ? 'bg-gold text-white' : 'text-fg'}`}
           >
             {t('wrapped.all_time')}
           </button>
         </div>
       </div>
-      <p className="mb-5 text-sm text-zinc-400">{t('wrapped.subtitle', { year })}</p>
+      <p className="mb-5 text-sm text-muted">{t('wrapped.subtitle', { year })}</p>
 
       {stats.totalEpisodes === 0 ? (
         <EmptyState icon="🎬" title={t('wrapped.title')} body={t('wrapped.nothing')} />
       ) : (
         <>
           <div
-            className="relative overflow-hidden rounded-3xl border border-white/[0.07] p-6"
+            className="relative overflow-hidden rounded-3xl border border-overlay/[0.07] p-6"
             style={{
               background:
                 'radial-gradient(90% 70% at 15% 0%, rgba(255,91,69,0.22), transparent 60%), #121016',
@@ -108,15 +108,15 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-3xl font-extrabold text-gold-400 lg:text-4xl">{value}</p>
-      <p className="mt-1 text-xs uppercase tracking-wide text-zinc-400">{label}</p>
+      <p className="mt-1 text-xs uppercase tracking-wide text-muted">{label}</p>
     </div>
   );
 }
 
 function Highlight({ label, value, to }: { label: string; value: string; to?: string }) {
   const inner = (
-    <div className="rounded-2xl bg-white/[0.05] p-4">
-      <p className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</p>
+    <div className="rounded-2xl bg-overlay/[0.05] p-4">
+      <p className="text-[11px] uppercase tracking-wide text-faint">{label}</p>
       <p className="mt-1 truncate font-bold">{value}</p>
     </div>
   );

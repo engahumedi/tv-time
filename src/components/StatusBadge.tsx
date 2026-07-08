@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { ShowStatus } from '../types';
 
 const STYLES: Record<ShowStatus, string> = {
-  not_started: 'bg-white/10 text-slate-300',
+  not_started: 'bg-overlay/10 text-fg',
   watching: 'bg-gold/20 text-gold-400',
   up_to_date: 'bg-emerald-500/20 text-emerald-300',
   finished: 'bg-sky-500/20 text-sky-300',

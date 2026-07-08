@@ -41,12 +41,12 @@ export function ListPickerModal({
               <button
                 key={l.id}
                 onClick={() => toggleShowInList(l.id, showId)}
-                className="flex w-full items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2.5 text-start hover:bg-white/[0.08]"
+                className="flex w-full items-center justify-between rounded-xl bg-overlay/[0.04] px-3 py-2.5 text-start hover:bg-overlay/[0.08]"
               >
                 <span className="min-w-0 flex-1 truncate font-medium">{l.name}</span>
                 <span
                   className={`grid h-6 w-6 place-items-center rounded-full border ${
-                    inList ? 'border-gold bg-gold text-white' : 'border-white/20'
+                    inList ? 'border-gold bg-gold text-white' : 'border-overlay/20'
                   }`}
                 >
                   {inList && (

@@ -47,20 +47,20 @@ export function Lists() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold">{list.name}</h2>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-faint">
                   {t('lists.count', { n: list.showIds.length })}
                 </p>
               </div>
               <button
                 onClick={() => confirm(t('lists.delete_confirm')) && deleteList(list.id)}
-                className="grid h-9 w-9 place-items-center rounded-lg text-zinc-500 hover:bg-rose-500/10 hover:text-rose-300"
+                className="grid h-9 w-9 place-items-center rounded-lg text-faint hover:bg-rose-500/10 hover:text-rose-300"
                 aria-label={t('common.remove')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" /></svg>
               </button>
             </div>
             {list.showIds.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t('lists.empty_body')}</p>
+              <p className="text-sm text-faint">{t('lists.empty_body')}</p>
             ) : (
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
                 {list.showIds.map((id) => {
@@ -68,10 +68,10 @@ export function Lists() {
                   if (!show) return null;
                   return (
                     <Link key={id} to={`/show/${id}`} className="group block">
-                      <div className="aspect-[2/3] overflow-hidden rounded-xl ring-1 ring-white/[0.06] group-hover:ring-gold/50">
+                      <div className="aspect-[2/3] overflow-hidden rounded-xl ring-1 ring-overlay/[0.06] group-hover:ring-gold/50">
                         <Poster path={show.posterPath} alt={show.name} className="h-full w-full" />
                       </div>
-                      <p className="mt-1.5 truncate text-xs font-medium text-zinc-300">{show.name}</p>
+                      <p className="mt-1.5 truncate text-xs font-medium text-fg">{show.name}</p>
                     </Link>
                   );
                 })}

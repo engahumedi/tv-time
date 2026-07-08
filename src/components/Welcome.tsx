@@ -44,12 +44,12 @@ export function Welcome() {
           <h1 className="text-4xl font-extrabold leading-[1.1] lg:text-5xl">
             {t('auth.welcome_title')}
           </h1>
-          <p className="mx-auto mt-4 max-w-sm text-base text-zinc-400 lg:mx-0">
+          <p className="mx-auto mt-4 max-w-sm text-base text-muted lg:mx-0">
             {t('auth.welcome_sub')}
           </p>
           <ul className="mx-auto mt-6 inline-flex flex-col gap-2.5 text-start lg:mx-0">
             {features.map((f) => (
-              <li key={f.text} className="flex items-center gap-3 text-sm text-zinc-300">
+              <li key={f.text} className="flex items-center gap-3 text-sm text-fg">
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-gold/15 text-gold-400">
                   {f.icon}
                 </span>
@@ -66,7 +66,7 @@ export function Welcome() {
           </div>
           <button
             onClick={continueAsGuest}
-            className="mt-4 w-full text-center text-sm text-zinc-500 hover:text-zinc-300"
+            className="mt-4 w-full text-center text-sm text-faint hover:text-fg"
           >
             {t('auth.explore_guest')}
           </button>

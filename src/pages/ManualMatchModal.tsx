@@ -50,7 +50,7 @@ export function ManualMatchModal({
         className="glass-strong flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-3xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-white/5 p-4">
+        <div className="border-b border-overlay/5 p-4">
           <h3 className="text-lg font-bold">
             {t('import.manual_search_title', { name: group.seriesName })}
           </h3>
@@ -59,7 +59,7 @@ export function ManualMatchModal({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('import.manual_search_placeholder')}
-            className="mt-3 w-full rounded-xl border border-white/10 bg-navy-800 px-4 py-2.5 outline-none focus:border-gold/50"
+            className="mt-3 w-full rounded-xl border border-overlay/10 bg-navy-800 px-4 py-2.5 outline-none focus:border-gold/50"
           />
         </div>
 
@@ -79,11 +79,11 @@ export function ManualMatchModal({
                   onClick={() => onResolve(s)}
                   className="group text-start"
                 >
-                  <div className="aspect-[2/3] overflow-hidden rounded-lg ring-1 ring-white/5 group-hover:ring-gold/50">
+                  <div className="aspect-[2/3] overflow-hidden rounded-lg ring-1 ring-overlay/5 group-hover:ring-gold/50">
                     <Poster path={s.posterPath} alt={s.name} className="h-full w-full" />
                   </div>
                   <p className="mt-1 truncate text-xs font-medium">{s.name}</p>
-                  <p className="truncate text-[10px] text-slate-500">
+                  <p className="truncate text-[10px] text-faint">
                     {s.firstAirDate?.slice(0, 4)}
                   </p>
                 </button>
@@ -92,7 +92,7 @@ export function ManualMatchModal({
           )}
         </div>
 
-        <div className="flex gap-2 border-t border-white/5 p-3">
+        <div className="flex gap-2 border-t border-overlay/5 p-3">
           <button className="btn-ghost flex-1 text-sm" onClick={onSkip}>
             {t('import.manual_skip')}
           </button>

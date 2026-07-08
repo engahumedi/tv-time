@@ -70,13 +70,13 @@ export function AuthForm({
     <div>
       {/* Tabs (hidden in forgot mode) */}
       {mode !== 'forgot' && (
-        <div className="mb-5 grid grid-cols-2 rounded-xl border border-white/[0.08] bg-navy-700/60 p-1">
+        <div className="mb-5 grid grid-cols-2 rounded-xl border border-overlay/[0.08] bg-navy-700/60 p-1">
           {(['in', 'up'] as const).map((m) => (
             <button
               key={m}
               onClick={() => switchMode(m)}
               className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
-                mode === m ? 'bg-gold text-white shadow-gold' : 'text-zinc-400'
+                mode === m ? 'bg-gold text-white shadow-gold' : 'text-muted'
               }`}
             >
               {m === 'in' ? t('auth.sign_in') : t('auth.sign_up')}
@@ -86,11 +86,11 @@ export function AuthForm({
       )}
 
       <h2 className="text-2xl font-extrabold">{title}</h2>
-      <p className="mt-1 text-sm text-zinc-400">{subtitle}</p>
+      <p className="mt-1 text-sm text-muted">{subtitle}</p>
 
       <form onSubmit={submit} className="mt-5 space-y-3">
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-zinc-400">
+          <span className="mb-1 block text-xs font-semibold text-muted">
             {t('auth.email')}
           </span>
           <input
@@ -107,7 +107,7 @@ export function AuthForm({
         {mode !== 'forgot' && (
           <label className="block">
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-400">
+              <span className="text-xs font-semibold text-muted">
                 {t('auth.password')}
               </span>
               {mode === 'in' && (

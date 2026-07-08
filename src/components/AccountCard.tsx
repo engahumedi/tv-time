@@ -13,7 +13,7 @@ export function AccountCard() {
 
   return (
     <section className="card p-4">
-      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-400">
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
         {t('auth.account')}
       </h2>
 
@@ -22,7 +22,7 @@ export function AccountCard() {
       ) : user ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs text-zinc-500">{t('auth.signed_in_as')}</p>
+            <p className="text-xs text-faint">{t('auth.signed_in_as')}</p>
             <p className="truncate font-semibold" dir="ltr">
               {user.email}
             </p>
@@ -39,7 +39,7 @@ export function AccountCard() {
         </div>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="max-w-xs text-sm text-zinc-400">{t('auth.sync_blurb')}</p>
+          <p className="max-w-xs text-sm text-muted">{t('auth.sync_blurb')}</p>
           <button className="btn-gold text-sm" onClick={() => setShowAuth(true)}>
             {t('auth.sign_in')}
           </button>

@@ -35,8 +35,8 @@ export function PersonModal({
         className="glass-strong flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-4 border-b border-white/5 p-4">
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
+        <div className="flex items-center gap-4 border-b border-overlay/5 p-4">
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full ring-1 ring-overlay/10">
             {src ? (
               <img src={src} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -46,7 +46,7 @@ export function PersonModal({
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-xl font-extrabold">{person.name}</h2>
             {person.knownFor && (
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-muted">
                 {t('discover.known_for')}: {person.knownFor}
               </p>
             )}

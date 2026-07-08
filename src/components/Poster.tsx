@@ -17,7 +17,7 @@ export function Poster({ path, alt, size = 'w342', className = '' }: PosterProps
   if (!src || errored) {
     return (
       <div
-        className={`flex items-center justify-center bg-navy-700 text-slate-500 ${className}`}
+        className={`flex items-center justify-center bg-navy-700 text-faint ${className}`}
         aria-label={alt}
       >
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>

@@ -114,7 +114,7 @@ export function Discover() {
               className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
                 tab === tb.key
                   ? 'bg-gold text-white'
-                  : 'bg-white/[0.05] text-zinc-300 hover:bg-white/[0.1]'
+                  : 'bg-overlay/[0.05] text-fg hover:bg-overlay/[0.1]'
               }`}
             >
               {tb.label}
@@ -125,14 +125,14 @@ export function Discover() {
 
       {tab === 'search' && (
         <div className="relative mx-auto mb-5 max-w-2xl lg:mx-0">
-          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-zinc-500">
+          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-faint">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" strokeLinecap="round" /></svg>
           </span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('discover.placeholder')}
-            className="w-full rounded-2xl border border-white/[0.08] bg-navy-800 py-3 ps-11 pe-4 text-base outline-none transition-colors placeholder:text-zinc-500 focus:border-gold/60"
+            className="w-full rounded-2xl border border-overlay/[0.08] bg-navy-800 py-3 ps-11 pe-4 text-base outline-none transition-colors placeholder:text-faint focus:border-gold/60"
             autoFocus
           />
         </div>
@@ -147,7 +147,7 @@ export function Discover() {
               className={`chip ${
                 genreId === g.id
                   ? 'bg-gold/20 text-gold-400'
-                  : 'bg-white/[0.05] text-zinc-300 hover:bg-white/[0.1]'
+                  : 'bg-overlay/[0.05] text-fg hover:bg-overlay/[0.1]'
               }`}
             >
               {g.name}
@@ -171,7 +171,7 @@ export function Discover() {
       {/* People results (search only) */}
       {!loading && tab === 'search' && people.length > 0 && (
         <section className="mb-6">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-400">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
             {t('discover.people')}
           </h2>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">

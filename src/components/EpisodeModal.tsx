@@ -75,14 +75,14 @@ export function EpisodeModal({
           {still ? (
             <img src={still} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-4xl text-zinc-600">
+            <div className="flex h-full w-full items-center justify-center text-4xl text-faint">
               🎬
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-navy-900 to-transparent" />
           <button
             onClick={onClose}
-            className="absolute end-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-navy-950/70 text-zinc-200 backdrop-blur"
+            className="absolute end-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-navy-950/70 text-fg backdrop-blur"
             aria-label={t('common.close')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
@@ -97,7 +97,7 @@ export function EpisodeModal({
 
         <div className="space-y-4 p-4">
           {/* Meta row */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
             {episode.airDate && <span>{formatDate(episode.airDate, lang)}</span>}
             {episode.runtime ? (
               <span>· {t('episode.runtime', { n: episode.runtime })}</span>
@@ -111,14 +111,14 @@ export function EpisodeModal({
           </div>
 
           {episode.overview && (
-            <p className="text-sm leading-relaxed text-zinc-300">{episode.overview}</p>
+            <p className="text-sm leading-relaxed text-fg">{episode.overview}</p>
           )}
 
           {inLibrary && (
             <>
               {/* Rating */}
-              <div className="flex items-center justify-between rounded-xl bg-white/[0.04] px-4 py-3">
-                <span className="text-sm font-semibold text-zinc-300">
+              <div className="flex items-center justify-between rounded-xl bg-overlay/[0.04] px-4 py-3">
+                <span className="text-sm font-semibold text-fg">
                   {t('episode.rate')}
                 </span>
                 <StarRating
@@ -131,7 +131,7 @@ export function EpisodeModal({
               {/* Personal note */}
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-400">
+                  <span className="text-xs font-semibold text-muted">
                     {t('episode.note')}
                   </span>
                   {savedFlash && (
@@ -145,7 +145,7 @@ export function EpisodeModal({
                   onChange={(e) => onNoteChange(e.target.value)}
                   placeholder={t('episode.note_placeholder')}
                   rows={3}
-                  className="w-full resize-none rounded-xl border border-white/[0.08] bg-navy-700 px-3 py-2 text-sm outline-none focus:border-gold/50"
+                  className="w-full resize-none rounded-xl border border-overlay/[0.08] bg-navy-700 px-3 py-2 text-sm outline-none focus:border-gold/50"
                 />
               </div>
 

@@ -14,8 +14,8 @@ export function EmptyState({ icon, title, body, children }: EmptyStateProps) {
       <div className="mb-5 grid h-20 w-20 place-items-center rounded-3xl bg-gold/10 text-4xl text-gold-400">
         {icon}
       </div>
-      <h2 className="mb-2 text-xl font-bold text-slate-100">{title}</h2>
-      <p className="mb-6 max-w-xs text-sm leading-relaxed text-slate-400">
+      <h2 className="mb-2 text-xl font-bold text-fg">{title}</h2>
+      <p className="mb-6 max-w-xs text-sm leading-relaxed text-muted">
         {body}
       </p>
       {children}

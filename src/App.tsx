@@ -25,11 +25,14 @@ const Lists = lazy(() =>
 const Wrapped = lazy(() =>
   import('./pages/Wrapped').then((m) => ({ default: m.Wrapped })),
 );
+const Settings = lazy(() =>
+  import('./pages/Settings').then((m) => ({ default: m.Settings })),
+);
 
 function Spinner() {
   return (
     <div className="flex min-h-full items-center justify-center pt-24">
-      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/10 border-t-gold" />
+      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-overlay/10 border-t-gold" />
     </div>
   );
 }
@@ -90,6 +93,14 @@ export default function App() {
           element={
             <Suspense fallback={<Spinner />}>
               <Wrapped />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <Settings />
             </Suspense>
           }
         />

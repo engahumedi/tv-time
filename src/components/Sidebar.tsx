@@ -1,6 +1,6 @@
 import { NavLink, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { NAV_ITEMS, LISTS_ITEM, IMPORT_ITEM, type NavItem } from './navItems';
+import { NAV_ITEMS, LISTS_ITEM, SETTINGS_ITEM, type NavItem } from './navItems';
 import { LanguageToggle } from './LanguageToggle';
 
 /** Persistent left navigation for tablet/desktop (hidden on mobile). */
@@ -11,11 +11,11 @@ export function Sidebar() {
     NAV_ITEMS[1],
     LISTS_ITEM,
     NAV_ITEMS[2],
-    IMPORT_ITEM,
+    SETTINGS_ITEM,
   ];
 
   return (
-    <aside className="fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-white/[0.07] bg-navy-900 px-4 py-6 lg:flex">
+    <aside className="fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-overlay/[0.07] bg-navy-900 px-4 py-6 lg:flex">
       <Link to="/" className="mb-8 flex items-center gap-2.5 px-2">
         <Logo />
         <span className="text-xl font-extrabold tracking-tight">
@@ -45,7 +45,7 @@ function SideLink({ item, label }: { item: NavItem; label: string }) {
         `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
           isActive
             ? 'bg-gold/10 text-gold-400'
-            : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100'
+            : 'text-muted hover:bg-overlay/[0.04] hover:text-fg'
         }`
       }
     >

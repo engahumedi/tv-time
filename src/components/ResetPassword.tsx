@@ -53,7 +53,7 @@ export function ResetPassword() {
         ) : (
           <>
             <h2 className="text-2xl font-extrabold">{t('auth.reset_title')}</h2>
-            <p className="mt-1 text-sm text-zinc-400">{t('auth.reset_sub')}</p>
+            <p className="mt-1 text-sm text-muted">{t('auth.reset_sub')}</p>
             <form onSubmit={submit} className="mt-5 space-y-3">
               <input
                 type="password"

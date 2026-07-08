@@ -18,7 +18,7 @@ export function ShowCard({
       to={`/show/${show.id}`}
       className={`group block ${width} animate-fade-up`}
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl shadow-soft ring-1 ring-white/[0.06] transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lift group-hover:ring-gold/50">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-xl shadow-soft ring-1 ring-overlay/[0.06] transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lift group-hover:ring-gold/50">
         <Poster
           path={show.posterPath}
           alt={show.name}
@@ -26,11 +26,11 @@ export function ShowCard({
         />
         <TmdbRating value={show.voteAverage} className="absolute end-1.5 top-1.5" />
       </div>
-      <p className="mt-2 truncate text-sm font-semibold text-zinc-200">
+      <p className="mt-2 truncate text-sm font-semibold text-fg">
         {show.name}
       </p>
       {subtitle && (
-        <p className="truncate text-xs text-zinc-500">{subtitle}</p>
+        <p className="truncate text-xs text-faint">{subtitle}</p>
       )}
     </Link>
   );

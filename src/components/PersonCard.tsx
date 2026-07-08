@@ -12,16 +12,16 @@ export function PersonCard({
   const src = img(person.profilePath, 'w200');
   return (
     <button onClick={onClick} className="group block text-center">
-      <div className="mx-auto aspect-square w-full overflow-hidden rounded-full ring-1 ring-white/10 transition-all group-hover:ring-gold/50">
+      <div className="mx-auto aspect-square w-full overflow-hidden rounded-full ring-1 ring-overlay/10 transition-all group-hover:ring-gold/50">
         {src ? (
           <img src={src} alt={person.name} className="h-full w-full object-cover" />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-navy-700 text-2xl text-zinc-500">
+          <div className="grid h-full w-full place-items-center bg-navy-700 text-2xl text-faint">
             👤
           </div>
         )}
       </div>
-      <p className="mt-2 truncate text-xs font-semibold text-zinc-200">
+      <p className="mt-2 truncate text-xs font-semibold text-fg">
         {person.name}
       </p>
     </button>

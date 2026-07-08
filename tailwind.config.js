@@ -4,16 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Neutral near-black surfaces (kept under the `navy` key so existing
-        // utility classes keep working after the redesign).
+        // Theme-aware surfaces (driven by CSS variables so light/dark flip).
         navy: {
-          950: '#0a0a0b', // page background
-          900: '#0e0e10', // nav / header
-          800: '#151517', // cards
-          700: '#1c1c20', // raised / inputs
-          600: '#292930', // borders / hover
+          950: 'rgb(var(--bg) / <alpha-value>)', // page background
+          900: 'rgb(var(--surface) / <alpha-value>)', // nav / header
+          800: 'rgb(var(--card) / <alpha-value>)', // cards
+          700: 'rgb(var(--raised) / <alpha-value>)', // raised / inputs
+          600: 'rgb(var(--border) / <alpha-value>)', // borders / hover
         },
-        // Coral accent (kept under the `gold` key for the same reason).
+        // Neutral overlay + text tokens that flip with the theme.
+        overlay: 'rgb(var(--overlay) / <alpha-value>)',
+        fg: 'rgb(var(--fg) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        faint: 'rgb(var(--faint) / <alpha-value>)',
+        // Coral accent (same in both themes).
         gold: {
           DEFAULT: '#ff5b45',
           400: '#ff8266',
@@ -21,9 +25,6 @@ export default {
           600: '#f0432c',
           700: '#c9331e',
         },
-        ink: '#0a0a0b',
-        surface: '#151517',
-        line: 'rgba(255,255,255,0.08)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'Segoe UI', 'sans-serif'],

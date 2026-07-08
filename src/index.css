@@ -2,8 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* Theme tokens (space-separated RGB channels, consumed via rgb(var(--x)/a)). */
+:root,
+:root[data-theme='dark'] {
   color-scheme: dark;
+  --bg: 10 10 11;
+  --surface: 14 14 16;
+  --card: 21 21 23;
+  --raised: 28 28 32;
+  --border: 41 41 48;
+  --overlay: 255 255 255;
+  --fg: 244 244 245;
+  --muted: 161 161 170;
+  --faint: 113 113 122;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: 244 244 246;
+  --surface: 255 255 255;
+  --card: 255 255 255;
+  --raised: 241 242 245;
+  --border: 224 226 231;
+  --overlay: 20 20 26;
+  --fg: 24 24 27;
+  --muted: 82 82 91;
+  --faint: 120 120 130;
 }
 
 html,
@@ -13,7 +37,7 @@ body,
 }
 
 body {
-  @apply bg-navy-950 text-zinc-100 font-sans antialiased;
+  @apply bg-navy-950 text-fg font-sans antialiased;
   /* Subtle editorial vignette — no glossy glow. */
   background-image: radial-gradient(
     1000px 600px at 15% -5%,
@@ -59,14 +83,14 @@ html[dir='rtl'] .rtl-flip {
 @layer components {
   /* Flat surfaces with hairline borders — replaces the old glass look. */
   .surface {
-    @apply bg-navy-800 border border-white/[0.07];
+    @apply bg-navy-800 border border-overlay/[0.07];
   }
   .glass,
   .glass-strong {
-    @apply bg-navy-800/95 backdrop-blur-md border border-white/[0.07];
+    @apply bg-navy-800/95 backdrop-blur-md border border-overlay/[0.07];
   }
   .card {
-    @apply bg-navy-800 border border-white/[0.07] rounded-2xl;
+    @apply bg-navy-800 border border-overlay/[0.07] rounded-2xl;
   }
 
   .btn {
@@ -79,15 +103,15 @@ html[dir='rtl'] .rtl-flip {
     @apply btn bg-gold text-white hover:bg-gold-600 shadow-gold;
   }
   .btn-ghost {
-    @apply btn bg-white/[0.04] text-zinc-100 hover:bg-white/[0.08]
-      border border-white/[0.08];
+    @apply btn bg-overlay/[0.04] text-fg hover:bg-overlay/[0.08]
+      border border-overlay/[0.08];
   }
   .chip {
     @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
   }
   .input {
-    @apply w-full rounded-xl border border-white/[0.08] bg-navy-700 px-4 py-2.5
-      text-base outline-none transition-colors placeholder:text-zinc-500
+    @apply w-full rounded-xl border border-overlay/[0.08] bg-navy-700 px-4 py-2.5
+      text-base outline-none transition-colors placeholder:text-faint
       focus:border-gold/60;
   }
 }
@@ -104,7 +128,7 @@ html[dir='rtl'] .rtl-flip {
 .shimmer {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgb(var(--overlay) / 0.05);
 }
 .shimmer::after {
   content: '';
@@ -114,7 +138,7 @@ html[dir='rtl'] .rtl-flip {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.06),
+    rgb(var(--overlay) / 0.07),
     transparent
   );
   animation: shimmer 1.4s infinite;

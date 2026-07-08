@@ -47,13 +47,13 @@ export function Home() {
     <div className="pt-1">
       {/* Tabs */}
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex gap-1 rounded-full bg-white/[0.05] p-1">
+        <div className="flex gap-1 rounded-full bg-overlay/[0.05] p-1">
           {(['list', 'upcoming'] as const).map((tb) => (
             <button
               key={tb}
               onClick={() => setTab(tb)}
               className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
-                tab === tb ? 'bg-gold text-white' : 'text-zinc-300 hover:text-white'
+                tab === tb ? 'bg-gold text-white' : 'text-fg hover:text-white'
               }`}
             >
               {tb === 'list' ? t('home.watch_list') : t('home.upcoming')}
@@ -63,7 +63,7 @@ export function Home() {
         {tab === 'list' && (
           <button
             onClick={() => setGrid((g) => !g)}
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-300 hover:text-white"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-overlay/10 bg-overlay/[0.04] text-fg hover:text-white"
             aria-label={grid ? 'List view' : 'Grid view'}
           >
             {grid ? <ListIcon /> : <GridIcon />}
@@ -106,7 +106,7 @@ function WatchListView({
       <div className="card p-6 text-center">
         <div className="mb-2 text-4xl">🎉</div>
         <h3 className="font-bold">{t('home.caught_up_title')}</h3>
-        <p className="mt-1 text-sm text-zinc-400">{t('home.caught_up_body')}</p>
+        <p className="mt-1 text-sm text-muted">{t('home.caught_up_body')}</p>
       </div>
     );
   }
@@ -131,7 +131,7 @@ function Section({ label, items }: { label: string; items: WatchListItem[] }) {
   return (
     <section>
       <div className="mb-3 flex">
-        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
+        <span className="rounded-full bg-overlay/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-fg">
           {label}
         </span>
       </div>
@@ -157,7 +157,7 @@ function WatchRow({ item }: { item: WatchListItem }) {
   }
 
   return (
-    <motion.div layout className="flex overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800">
+    <motion.div layout className="flex overflow-hidden rounded-2xl border border-overlay/[0.07] bg-navy-800">
       <Link to={`/show/${show.id}`} className="relative w-28 shrink-0 sm:w-32">
         {thumb ? (
           <img src={thumb} alt="" className="h-full w-full object-cover" />
@@ -173,7 +173,7 @@ function WatchRow({ item }: { item: WatchListItem }) {
         <div className="min-w-0 flex-1">
           <Link
             to={`/show/${show.id}`}
-            className="inline-flex max-w-full items-center gap-1 rounded-full border border-white/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-zinc-100 hover:border-gold/60"
+            className="inline-flex max-w-full items-center gap-1 rounded-full border border-overlay/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-fg hover:border-gold/60"
           >
             <span className="truncate">{show.name}</span>
             <svg className="rtl-flip shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
@@ -182,14 +182,14 @@ function WatchRow({ item }: { item: WatchListItem }) {
             S{String(episode.seasonNumber).padStart(2, '0')} | E
             {String(episode.episodeNumber).padStart(2, '0')}
             {remaining > 0 && (
-              <span className="ms-1.5 align-middle text-xs font-semibold text-zinc-500">
+              <span className="ms-1.5 align-middle text-xs font-semibold text-faint">
                 +{remaining}
               </span>
             )}
           </p>
-          <p className="truncate text-sm text-zinc-400">{episode.name}</p>
+          <p className="truncate text-sm text-muted">{episode.name}</p>
           {isPremiere && (
-            <span className="mt-1.5 inline-block rounded bg-white px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-navy-950">
+            <span className="mt-1.5 inline-block rounded bg-gold px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white">
               {t('home.premiere')}
             </span>
           )}
@@ -197,7 +197,7 @@ function WatchRow({ item }: { item: WatchListItem }) {
 
         <button
           onClick={onWatch}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-zinc-300 transition-all hover:bg-gold hover:text-white active:scale-90"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-overlay/10 text-fg transition-all hover:bg-gold hover:text-white active:scale-90"
           aria-label={t('show.mark_watched')}
           title={t('show.mark_watched')}
         >
@@ -238,7 +238,7 @@ function UpcomingView({ lang }: { lang: string }) {
       {groups.map((g) => (
         <section key={g.key}>
           <div className="mb-3 flex">
-            <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
+            <span className="rounded-full bg-overlay/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-fg">
               {g.label}
             </span>
           </div>
@@ -259,7 +259,7 @@ function UpcomingRow({ item, lang }: { item: CalendarItem; lang: string }) {
   return (
     <Link
       to={`/show/${show.id}`}
-      className="flex overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800 hover:bg-navy-700"
+      className="flex overflow-hidden rounded-2xl border border-overlay/[0.07] bg-navy-800 hover:bg-navy-700"
     >
       <div className="w-28 shrink-0 sm:w-32">
         {thumb ? (
@@ -269,14 +269,14 @@ function UpcomingRow({ item, lang }: { item: CalendarItem; lang: string }) {
         )}
       </div>
       <div className="min-w-0 flex-1 p-3">
-        <p className="truncate text-xs font-bold uppercase tracking-wide text-zinc-300">
+        <p className="truncate text-xs font-bold uppercase tracking-wide text-fg">
           {show.name}
         </p>
         <p className="mt-1 text-base font-extrabold">
           S{String(episode.seasonNumber).padStart(2, '0')} | E
           {String(episode.episodeNumber).padStart(2, '0')}
         </p>
-        <p className="truncate text-sm text-zinc-400">{episode.name}</p>
+        <p className="truncate text-sm text-muted">{episode.name}</p>
         <p className="mt-1 text-xs font-semibold text-gold-400">
           {formatDate(ts, lang)}
         </p>
@@ -300,7 +300,7 @@ function Skeleton() {
   return (
     <div className="grid gap-3 pt-8 xl:grid-cols-2">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="flex overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800">
+        <div key={i} className="flex overflow-hidden rounded-2xl border border-overlay/[0.07] bg-navy-800">
           <div className="h-24 w-28 shimmer sm:w-32" />
           <div className="flex-1 space-y-2 p-3">
             <div className="h-4 w-1/2 rounded shimmer" />

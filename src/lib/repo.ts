@@ -101,6 +101,15 @@ export async function rateShow(showId: number, rating: number): Promise<void> {
   if (show) void cloudUpsertShow(show);
 }
 
+/** Toggle a show's favourite flag. */
+export async function toggleFavorite(showId: number): Promise<void> {
+  const show = await db.shows.get(showId);
+  if (!show) return;
+  const favorite = !show.favorite;
+  await db.shows.update(showId, { favorite: favorite || undefined });
+  void cloudUpsertShow({ ...show, favorite: favorite || undefined });
+}
+
 /** Replace the tags on a show. */
 export async function setTags(showId: number, tags: string[]): Promise<void> {
   const clean = [...new Set(tags.map((t) => t.trim()).filter(Boolean))];

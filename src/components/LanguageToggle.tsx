@@ -8,7 +8,7 @@ export function LanguageToggle({ compact = false }: { compact?: boolean }) {
 
   return (
     <div
-      className={`inline-flex rounded-full border border-white/10 bg-white/5 p-0.5 ${
+      className={`inline-flex rounded-full border border-overlay/10 bg-overlay/5 p-0.5 ${
         compact ? 'text-xs' : 'text-sm'
       }`}
       role="group"
@@ -21,7 +21,7 @@ export function LanguageToggle({ compact = false }: { compact?: boolean }) {
           className={`rounded-full px-3 py-1 font-semibold transition-colors ${
             lang === l
               ? 'bg-gold text-navy-950'
-              : 'text-slate-300 hover:text-white'
+              : 'text-fg hover:text-white'
           }`}
           aria-pressed={lang === l}
         >

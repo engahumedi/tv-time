@@ -39,10 +39,10 @@ export function ShowExtras({ showId }: { showId: number }) {
     <>
       {trailerKey && (
         <section className="mt-6">
-          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-zinc-400">
+          <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
             {t('show.trailer')}
           </h2>
-          <div className="aspect-video w-full overflow-hidden rounded-2xl ring-1 ring-white/10">
+          <div className="aspect-video w-full overflow-hidden rounded-2xl ring-1 ring-overlay/10">
             <iframe
               className="h-full w-full"
               src={`https://www.youtube.com/embed/${trailerKey}`}
@@ -56,7 +56,7 @@ export function ShowExtras({ showId }: { showId: number }) {
 
       {cast.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-400">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
             {t('show.cast')}
           </h2>
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:px-0">
@@ -64,15 +64,15 @@ export function ShowExtras({ showId }: { showId: number }) {
               const src = img(c.profilePath, 'w200');
               return (
                 <div key={c.id} className="w-20 shrink-0 text-center">
-                  <div className="aspect-square overflow-hidden rounded-full ring-1 ring-white/10">
+                  <div className="aspect-square overflow-hidden rounded-full ring-1 ring-overlay/10">
                     {src ? (
                       <img src={src} alt={c.name} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="grid h-full w-full place-items-center bg-navy-700 text-xl text-zinc-500">👤</div>
+                      <div className="grid h-full w-full place-items-center bg-navy-700 text-xl text-faint">👤</div>
                     )}
                   </div>
                   <p className="mt-1.5 truncate text-xs font-semibold">{c.name}</p>
-                  <p className="truncate text-[10px] text-zinc-500">{c.character}</p>
+                  <p className="truncate text-[10px] text-faint">{c.character}</p>
                 </div>
               );
             })}
@@ -82,7 +82,7 @@ export function ShowExtras({ showId }: { showId: number }) {
 
       {recs.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-400">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
             {t('show.recommendations')}
           </h2>
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:px-0">

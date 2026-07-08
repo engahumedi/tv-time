@@ -20,6 +20,7 @@ import {
   setStatus,
   rateShow,
   setTags,
+  toggleFavorite,
 } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { getImdbRating, type ImdbRating } from '../lib/omdb';
@@ -110,7 +111,7 @@ export function ShowDetail() {
     return (
       <div className="pt-16 text-center">
         <p className="text-4xl">😕</p>
-        <p className="mt-3 text-slate-300">{t('errors.load_failed')}</p>
+        <p className="mt-3 text-fg">{t('errors.load_failed')}</p>
         <button className="btn-ghost mt-4" onClick={() => navigate(-1)}>
           {t('common.close')}
         </button>
@@ -152,7 +153,7 @@ export function ShowDetail() {
       <div className="pointer-events-none sticky top-0 z-20 flex items-center px-4 py-3 lg:px-10">
         <button
           onClick={() => navigate(-1)}
-          className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-navy-950/60 text-zinc-100 backdrop-blur transition-colors hover:bg-navy-900"
+          className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-navy-950/60 text-fg backdrop-blur transition-colors hover:bg-navy-900"
           aria-label={t('common.close')}
         >
           <svg className="rtl-flip" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -188,12 +189,12 @@ export function ShowDetail() {
             <Poster
               path={show.posterPath}
               alt={show.name}
-              className="aspect-[2/3] rounded-xl ring-1 ring-white/10 shadow-lift"
+              className="aspect-[2/3] rounded-xl ring-1 ring-overlay/10 shadow-lift"
             />
           </div>
           <div className="flex-1 pt-16 lg:pt-32">
             <h1 className="text-xl font-extrabold leading-tight lg:text-4xl">{show.name}</h1>
-            <p className="mt-1 text-sm text-zinc-400 lg:mt-2 lg:text-base">
+            <p className="mt-1 text-sm text-muted lg:mt-2 lg:text-base">
               {show.firstAirDate?.slice(0, 4)}
               {show.numberOfSeasons
                 ? ` · ${show.numberOfSeasons} ${t('common.seasons')}`
@@ -207,13 +208,13 @@ export function ShowDetail() {
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {show.genres.slice(0, 3).map((g) => (
-                <span key={g} className="chip bg-white/5 text-zinc-300">
+                <span key={g} className="chip bg-overlay/5 text-fg">
                   {g}
                 </span>
               ))}
             </div>
             {inLibrary && storedShow && (
-              <p className="mt-2 text-xs text-zinc-500">
+              <p className="mt-2 text-xs text-faint">
                 {t('show.added_on', {
                   date: formatDate(storedShow.addedAt, i18n.language),
                 })}
@@ -231,7 +232,22 @@ export function ShowDetail() {
                 onChange={(s) => setStatus(showId, s)}
               />
               <button
-                className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 text-zinc-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
+                onClick={() => toggleFavorite(showId)}
+                className={`grid h-11 w-11 place-items-center rounded-xl border border-overlay/10 transition-colors ${
+                  storedShow?.favorite
+                    ? 'bg-rose-500/15 text-rose-400'
+                    : 'text-muted hover:text-rose-300'
+                }`}
+                aria-label={t('show.favorite')}
+                title={t('show.favorite')}
+                aria-pressed={Boolean(storedShow?.favorite)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={storedShow?.favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+                </svg>
+              </button>
+              <button
+                className="grid h-11 w-11 place-items-center rounded-xl border border-overlay/10 text-muted transition-colors hover:bg-rose-500/10 hover:text-rose-300"
                 aria-label={t('common.remove')}
                 title={t('common.remove')}
                 onClick={async () => {
@@ -255,10 +271,10 @@ export function ShowDetail() {
 
         {/* Your rating (out of 10) */}
         {inLibrary && (
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/[0.07] bg-navy-800 px-4 py-3">
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-overlay/[0.07] bg-navy-800 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">{t('show.your_rating')}</p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-faint">
                 {storedShow?.userRating
                   ? t('show.out_of_ten', { n: storedShow.userRating })
                   : t('show.rate_this')}
@@ -278,10 +294,10 @@ export function ShowDetail() {
         {inLibrary && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {(storedShow?.tags ?? []).map((tag) => (
-              <span key={tag} className="chip group bg-white/[0.06] text-zinc-200">
+              <span key={tag} className="chip group bg-overlay/[0.06] text-fg">
                 {tag}
                 <button
-                  className="ms-1.5 text-zinc-500 hover:text-rose-300"
+                  className="ms-1.5 text-faint hover:text-rose-300"
                   aria-label={t('common.remove')}
                   onClick={() =>
                     setTags(
@@ -306,7 +322,7 @@ export function ShowDetail() {
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 placeholder={t('show.add_tag')}
-                className="w-32 rounded-full border border-white/10 bg-navy-700 px-3 py-1 text-xs outline-none focus:border-gold/50"
+                className="w-32 rounded-full border border-overlay/10 bg-navy-700 px-3 py-1 text-xs outline-none focus:border-gold/50"
               />
             </form>
             <button
@@ -320,13 +336,13 @@ export function ShowDetail() {
 
         {inLibrary && totalCount > 0 && (
           <div className="mt-4">
-            <div className="mb-1 flex justify-between text-xs text-slate-400">
+            <div className="mb-1 flex justify-between text-xs text-muted">
               <span>
                 {t('show.progress', { watched: watchedCount, total: totalCount })}
               </span>
               <StatusBadge status={storedShow?.status ?? 'watching'} />
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="h-2 overflow-hidden rounded-full bg-overlay/10">
               <motion.div
                 className="h-full rounded-full bg-gold"
                 initial={{ width: 0 }}
@@ -342,10 +358,10 @@ export function ShowDetail() {
         {/* Overview */}
         {show.overview && (
           <section className="mt-6">
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-400">
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
               {t('show.overview')}
             </h2>
-            <p className="text-sm leading-relaxed text-slate-300">
+            <p className="text-sm leading-relaxed text-fg">
               {show.overview}
             </p>
           </section>
@@ -364,7 +380,7 @@ export function ShowDetail() {
         <section className="mt-6 pb-4">
           <h2 className="mb-3 text-lg font-bold">{t('show.seasons_title')}</h2>
           {seasons.length === 0 ? (
-            <p className="text-sm text-slate-500">{t('show.no_episodes')}</p>
+            <p className="text-sm text-faint">{t('show.no_episodes')}</p>
           ) : (
             <div className="space-y-3">
               {seasons.map((season) => (
@@ -416,7 +432,7 @@ function StatusSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as ShowStatus)}
-      className="rounded-xl border border-white/10 bg-navy-800 px-3 py-2.5 text-sm font-semibold outline-none focus:border-gold/50"
+      className="rounded-xl border border-overlay/10 bg-navy-800 px-3 py-2.5 text-sm font-semibold outline-none focus:border-gold/50"
       aria-label={t('show.set_status')}
     >
       {STATUSES.map((s) => (
@@ -483,7 +499,7 @@ function SeasonBlock({
           <p className="font-bold">
             {t('common.season')} {seasonNumber}
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted">
             {watched} / {episodes.length} {t('common.episodes')}
           </p>
         </div>
@@ -523,32 +539,32 @@ function SeasonBlock({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-white/5"
+            className="overflow-hidden border-t border-overlay/5"
           >
             {episodes.map((ep) => {
               const isWatched = watchedIds?.has(ep.id) ?? false;
               return (
                 <li
                   key={ep.id}
-                  className="flex items-center gap-2 px-2 py-1 hover:bg-white/[0.03]"
+                  className="flex items-center gap-2 px-2 py-1 hover:bg-overlay/[0.03]"
                 >
                   <button
                     onClick={() => onOpen(ep)}
                     className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-start"
                   >
-                    <span className="w-6 shrink-0 text-center text-xs text-zinc-500">
+                    <span className="w-6 shrink-0 text-center text-xs text-faint">
                       {ep.episodeNumber}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm">{ep.name}</span>
-                    <svg className="rtl-flip shrink-0 text-zinc-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                    <svg className="rtl-flip shrink-0 text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                   </button>
                   <button
                     disabled={!inLibrary}
                     onClick={() => onToggle(ep)}
                     className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-all active:scale-90 ${
                       isWatched
-                        ? 'border-gold bg-gold text-navy-950'
-                        : 'border-white/20 text-transparent hover:border-gold/60'
+                        ? 'border-gold bg-gold text-white'
+                        : 'border-overlay/20 text-transparent hover:border-gold/60'
                     } ${!inLibrary ? 'opacity-40' : ''}`}
                     aria-label={t('show.mark_watched')}
                     aria-pressed={isWatched}
