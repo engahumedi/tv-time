@@ -34,16 +34,6 @@ export function Layout() {
         </Link>
         <div className="flex items-center gap-2">
           <Link
-            to="/calendar"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-zinc-300"
-            aria-label={t('nav.calendar')}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
-          </Link>
-          <Link
             to="/import"
             className="grid h-9 w-9 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-zinc-300"
             aria-label={t('nav.import')}

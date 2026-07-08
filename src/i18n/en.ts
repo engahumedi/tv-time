@@ -52,6 +52,13 @@ export const en = {
     next_episode: 'Next episode',
     aired: 'Aired {{date}}',
     not_yet_aired: 'Airs {{date}}',
+    watch_list: 'Watch List',
+    upcoming: 'Upcoming',
+    watch_next: 'Watch next',
+    stale: 'Haven’t watched for a while',
+    premiere: 'Premiere',
+    upcoming_empty_title: 'Nothing on the horizon',
+    upcoming_empty_body: 'When your shows announce new episodes, they’ll show up here with their dates.',
   },
   discover: {
     title: 'Discover',

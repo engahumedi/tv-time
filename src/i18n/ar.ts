@@ -54,6 +54,13 @@ export const ar: Translation = {
     next_episode: 'الحلقة التالية',
     aired: 'عُرضت في {{date}}',
     not_yet_aired: 'تُعرض في {{date}}',
+    watch_list: 'قائمة المشاهدة',
+    upcoming: 'القادمة',
+    watch_next: 'شاهِد التالي',
+    stale: 'لم تشاهده منذ فترة',
+    premiere: 'بداية',
+    upcoming_empty_title: 'لا شيء قادم',
+    upcoming_empty_body: 'عند إعلان حلقات جديدة لمسلسلاتك ستظهر هنا بتواريخها.',
   },
   discover: {
     title: 'استكشف',

@@ -6,6 +6,56 @@ export function useLists(): ShowList[] | undefined {
   return useLiveQuery(() => db.lists.orderBy('createdAt').toArray());
 }
 
+export interface WatchListItem {
+  show: Show;
+  episode: Episode;
+  /** Unwatched aired episodes remaining after this one. */
+  remaining: number;
+  /** Epoch ms of the most recent watch for this show (0 if never). */
+  lastWatchedAt: number;
+  /** The next episode is the start of a season/series. */
+  isPremiere: boolean;
+}
+
+/**
+ * The "watch next" list: for every followed show with an unwatched aired
+ * episode, the next episode to watch, how many remain, and when it was last
+ * watched (so the UI can surface "haven't watched for a while").
+ */
+export function useWatchList(): WatchListItem[] | undefined {
+  return useLiveQuery(async () => {
+    const shows = await db.shows.toArray();
+    const now = Date.now();
+    const items: WatchListItem[] = [];
+    for (const show of shows) {
+      const eps = (await db.episodes.where('showId').equals(show.id).toArray()).sort(
+        (a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber,
+      );
+      const watchedIds = new Set(
+        (await db.watches.where('showId').equals(show.id).primaryKeys()) as string[],
+      );
+      const watches = await db.watches.where('showId').equals(show.id).toArray();
+      const airedUnwatched = eps.filter((e) => {
+        if (watchedIds.has(e.id)) return false;
+        if (!e.airDate) return false;
+        const t = new Date(e.airDate).getTime();
+        return !Number.isNaN(t) && t <= now;
+      });
+      if (airedUnwatched.length === 0) continue;
+      const episode = airedUnwatched[0];
+      const lastWatchedAt = watches.reduce((m, w) => Math.max(m, w.watchedAt), 0);
+      items.push({
+        show,
+        episode,
+        remaining: airedUnwatched.length - 1,
+        lastWatchedAt,
+        isPremiere: episode.episodeNumber === 1,
+      });
+    }
+    return items;
+  });
+}
+
 export interface CalendarItem {
   show: Show;
   episode: Episode;

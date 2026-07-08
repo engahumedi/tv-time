@@ -1,32 +1,36 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { useToWatch, useLibrary } from '../lib/hooks';
+import {
+  useWatchList,
+  useLibrary,
+  useCalendar,
+  type WatchListItem,
+  type CalendarItem,
+} from '../lib/hooks';
 import { img } from '../lib/tmdb';
 import { ShowCard } from '../components/ShowCard';
 import { EmptyState } from '../components/EmptyState';
 import { markWatched } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
-import type { Episode, Show } from '../types';
+
+const STALE_MS = 30 * 864e5; // 30 days
 
 export function Home() {
   const { t, i18n } = useTranslation();
-  const toWatch = useToWatch();
+  const [tab, setTab] = useState<'list' | 'upcoming'>('list');
+  const [grid, setGrid] = useState(false);
+  const watchList = useWatchList();
   const library = useLibrary();
   const navigate = useNavigate();
 
-  if (toWatch === undefined || library === undefined) {
-    return <RailSkeleton />;
-  }
+  if (watchList === undefined || library === undefined) return <Skeleton />;
 
   if (library.length === 0) {
     return (
-      <EmptyState
-        icon="📺"
-        title={t('home.empty_title')}
-        body={t('home.empty_body')}
-      >
+      <EmptyState icon="📺" title={t('home.empty_title')} body={t('home.empty_body')}>
         <div className="flex flex-col gap-3">
           <button className="btn-gold" onClick={() => navigate('/discover')}>
             {t('home.empty_cta')}
@@ -40,132 +44,269 @@ export function Home() {
   }
 
   return (
-    <div className="space-y-8 pt-2">
-      <section>
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-3xl font-extrabold lg:text-4xl">{t('home.title')}</h1>
-        </div>
-        <p className="mb-5 text-sm text-zinc-400">{t('home.subtitle')}</p>
-
-        {toWatch.length === 0 ? (
-          <div className="card p-6 text-center animate-fade-up">
-            <div className="mb-2 text-4xl">🎉</div>
-            <h3 className="font-bold">{t('home.caught_up_title')}</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              {t('home.caught_up_body')}
-            </p>
-            <Link to="/discover" className="btn-gold mt-4">
-              {t('home.empty_cta')}
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {toWatch.map(({ show, episode }) => (
-              <UpNextCard
-                key={show.id}
-                show={show}
-                episode={episode}
-                lang={i18n.language}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-bold">{t('discover.in_library')}</h2>
-        </div>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-          {library.slice(0, 21).map((s) => (
-            <ShowCard key={s.id} show={s} />
+    <div className="pt-1">
+      {/* Tabs */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex gap-1 rounded-full bg-white/[0.05] p-1">
+          {(['list', 'upcoming'] as const).map((tb) => (
+            <button
+              key={tb}
+              onClick={() => setTab(tb)}
+              className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
+                tab === tb ? 'bg-gold text-white' : 'text-zinc-300 hover:text-white'
+              }`}
+            >
+              {tb === 'list' ? t('home.watch_list') : t('home.upcoming')}
+            </button>
           ))}
         </div>
-      </section>
+        {tab === 'list' && (
+          <button
+            onClick={() => setGrid((g) => !g)}
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-300 hover:text-white"
+            aria-label={grid ? 'List view' : 'Grid view'}
+          >
+            {grid ? <ListIcon /> : <GridIcon />}
+          </button>
+        )}
+      </div>
+
+      {tab === 'list' ? (
+        <WatchListView items={watchList} grid={grid} library={library} />
+      ) : (
+        <UpcomingView lang={i18n.language} />
+      )}
     </div>
   );
 }
 
-function UpNextCard({
-  show,
-  episode,
-  lang,
+function WatchListView({
+  items,
+  grid,
+  library,
 }: {
-  show: Show;
-  episode: Episode;
-  lang: string;
+  items: WatchListItem[];
+  grid: boolean;
+  library: import('../types').Show[];
 }) {
   const { t } = useTranslation();
 
+  if (grid) {
+    return (
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+        {library.map((s) => (
+          <ShowCard key={s.id} show={s} />
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="card p-6 text-center">
+        <div className="mb-2 text-4xl">🎉</div>
+        <h3 className="font-bold">{t('home.caught_up_title')}</h3>
+        <p className="mt-1 text-sm text-zinc-400">{t('home.caught_up_body')}</p>
+      </div>
+    );
+  }
+
+  const now = Date.now();
+  const next = items
+    .filter((i) => i.lastWatchedAt === 0 || now - i.lastWatchedAt <= STALE_MS)
+    .sort((a, b) => b.lastWatchedAt - a.lastWatchedAt);
+  const stale = items
+    .filter((i) => i.lastWatchedAt > 0 && now - i.lastWatchedAt > STALE_MS)
+    .sort((a, b) => a.lastWatchedAt - b.lastWatchedAt);
+
+  return (
+    <div className="space-y-6">
+      {next.length > 0 && <Section label={t('home.watch_next')} items={next} />}
+      {stale.length > 0 && <Section label={t('home.stale')} items={stale} />}
+    </div>
+  );
+}
+
+function Section({ label, items }: { label: string; items: WatchListItem[] }) {
+  return (
+    <section>
+      <div className="mb-3 flex">
+        <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
+          {label}
+        </span>
+      </div>
+      <div className="grid gap-3 xl:grid-cols-2">
+        {items.map((item) => (
+          <WatchRow key={item.show.id} item={item} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WatchRow({ item }: { item: WatchListItem }) {
+  const { t } = useTranslation();
+  const { show, episode, remaining, isPremiere } = item;
+  const thumb = img(episode.stillPath || show.backdropPath, 'w342');
+
   async function onWatch(e: React.MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     await markWatched(episode, Date.now(), 'manual', show.episodeRuntime);
     celebrate('small');
   }
 
-  const still = img(episode.stillPath || show.backdropPath, 'w500');
-
   return (
-    <motion.div
-      layout
-      className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800"
-    >
-      <Link to={`/show/${show.id}`} className="block">
-        {/* Episode thumbnail (16:9) */}
-        <div className="relative aspect-video w-full overflow-hidden">
-          {still ? (
-            <img
-              src={still}
-              alt=""
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-end p-3"
-              style={{
-                background:
-                  'radial-gradient(120% 100% at 50% 0%, rgba(255,91,69,0.22), transparent 60%), #14131a',
-              }}
-            >
-              <span className="text-3xl opacity-40">🎬</span>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/20 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-3">
-            <p className="truncate font-bold leading-tight">{show.name}</p>
-            <p className="mt-0.5 truncate text-xs text-zinc-300">
-              <span className="text-gold-400">
-                S{episode.seasonNumber} · E{episode.episodeNumber}
-              </span>{' '}
-              — {episode.name}
-            </p>
-          </div>
-        </div>
+    <motion.div layout className="flex overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800">
+      <Link to={`/show/${show.id}`} className="relative w-28 shrink-0 sm:w-32">
+        {thumb ? (
+          <img src={thumb} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div
+            className="h-full w-full"
+            style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(255,91,69,0.25), transparent 60%), #15131a' }}
+          />
+        )}
       </Link>
-      <button
-        onClick={onWatch}
-        className="absolute end-2.5 top-2.5 grid h-10 w-10 place-items-center rounded-full bg-navy-950/70 text-gold-400 backdrop-blur transition-all hover:bg-gold hover:text-white active:scale-90"
-        aria-label={t('show.mark_watched')}
-        title={t('show.mark_watched')}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-      </button>
-      {episode.airDate && (
-        <span className="pointer-events-none absolute start-2.5 top-2.5 rounded-md bg-navy-950/70 px-1.5 py-0.5 text-[10px] text-zinc-300 backdrop-blur">
-          {formatDate(episode.airDate, lang)}
-        </span>
-      )}
+
+      <div className="flex min-w-0 flex-1 items-center gap-2 p-3">
+        <div className="min-w-0 flex-1">
+          <Link
+            to={`/show/${show.id}`}
+            className="inline-flex max-w-full items-center gap-1 rounded-full border border-white/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-zinc-100 hover:border-gold/60"
+          >
+            <span className="truncate">{show.name}</span>
+            <svg className="rtl-flip shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+          </Link>
+          <p className="mt-1.5 text-base font-extrabold">
+            S{String(episode.seasonNumber).padStart(2, '0')} | E
+            {String(episode.episodeNumber).padStart(2, '0')}
+            {remaining > 0 && (
+              <span className="ms-1.5 align-middle text-xs font-semibold text-zinc-500">
+                +{remaining}
+              </span>
+            )}
+          </p>
+          <p className="truncate text-sm text-zinc-400">{episode.name}</p>
+          {isPremiere && (
+            <span className="mt-1.5 inline-block rounded bg-white px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-navy-950">
+              {t('home.premiere')}
+            </span>
+          )}
+        </div>
+
+        <button
+          onClick={onWatch}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-zinc-300 transition-all hover:bg-gold hover:text-white active:scale-90"
+          aria-label={t('show.mark_watched')}
+          title={t('show.mark_watched')}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+        </button>
+      </div>
     </motion.div>
   );
 }
 
-function RailSkeleton() {
+function UpcomingView({ lang }: { lang: string }) {
+  const { t } = useTranslation();
+  const items = useCalendar();
+  if (items === undefined) return <Skeleton />;
+
+  const dayStart = new Date().setHours(0, 0, 0, 0);
+  const future = items.filter((i) => i.ts >= dayStart);
+
+  if (future.length === 0) {
+    return (
+      <EmptyState
+        icon="🗓️"
+        title={t('home.upcoming_empty_title')}
+        body={t('home.upcoming_empty_body')}
+      />
+    );
+  }
+
+  const weekEnd = dayStart + 7 * 864e5;
+  const groups = [
+    { key: 'today', label: t('calendar.today'), items: future.filter((i) => i.ts < dayStart + 864e5) },
+    { key: 'week', label: t('calendar.this_week'), items: future.filter((i) => i.ts >= dayStart + 864e5 && i.ts < weekEnd) },
+    { key: 'later', label: t('calendar.later'), items: future.filter((i) => i.ts >= weekEnd) },
+  ].filter((g) => g.items.length > 0);
+
   return (
-    <div className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="aspect-video rounded-2xl shimmer" />
+    <div className="space-y-6">
+      {groups.map((g) => (
+        <section key={g.key}>
+          <div className="mb-3 flex">
+            <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-300">
+              {g.label}
+            </span>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {g.items.map((it) => (
+              <UpcomingRow key={it.episode.id} item={it} lang={lang} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function UpcomingRow({ item, lang }: { item: CalendarItem; lang: string }) {
+  const { show, episode, ts } = item;
+  const thumb = img(episode.stillPath || show.backdropPath, 'w342');
+  return (
+    <Link
+      to={`/show/${show.id}`}
+      className="flex overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800 hover:bg-navy-700"
+    >
+      <div className="w-28 shrink-0 sm:w-32">
+        {thumb ? (
+          <img src={thumb} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="h-full w-full" style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(255,91,69,0.2), transparent 60%), #15131a' }} />
+        )}
+      </div>
+      <div className="min-w-0 flex-1 p-3">
+        <p className="truncate text-xs font-bold uppercase tracking-wide text-zinc-300">
+          {show.name}
+        </p>
+        <p className="mt-1 text-base font-extrabold">
+          S{String(episode.seasonNumber).padStart(2, '0')} | E
+          {String(episode.episodeNumber).padStart(2, '0')}
+        </p>
+        <p className="truncate text-sm text-zinc-400">{episode.name}</p>
+        <p className="mt-1 text-xs font-semibold text-gold-400">
+          {formatDate(ts, lang)}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+  );
+}
+function ListIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="grid gap-3 pt-8 xl:grid-cols-2">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="flex overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800">
+          <div className="h-24 w-28 shimmer sm:w-32" />
+          <div className="flex-1 space-y-2 p-3">
+            <div className="h-4 w-1/2 rounded shimmer" />
+            <div className="h-3 w-1/3 rounded shimmer" />
+          </div>
+        </div>
       ))}
     </div>
   );
