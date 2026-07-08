@@ -36,6 +36,14 @@ export function useAllWatches(): WatchRecord[] | undefined {
   return useLiveQuery(() => db.watches.toArray());
 }
 
+/** The watch record (watched date + rating) for a single episode, or null. */
+export function useWatch(episodeId: string | null): WatchRecord | null | undefined {
+  return useLiveQuery(
+    async () => (episodeId ? ((await db.watches.get(episodeId)) ?? null) : null),
+    [episodeId],
+  );
+}
+
 export function useIsInLibrary(id: number): boolean {
   const show = useLiveQuery(() => db.shows.get(id), [id]);
   return Boolean(show);

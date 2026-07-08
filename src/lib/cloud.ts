@@ -48,6 +48,7 @@ function watchToRow(w: WatchRecord) {
     episode: w.episodeNumber,
     watched_at: w.watchedAt,
     runtime: w.runtime,
+    rating: w.rating ?? null,
     source: w.source,
   };
 }
@@ -59,6 +60,7 @@ interface WatchRow {
   episode: number;
   watched_at: number;
   runtime: number;
+  rating: number | null;
   source: string;
 }
 
@@ -70,6 +72,7 @@ function rowToWatch(r: WatchRow): WatchRecord {
     episodeNumber: r.episode,
     watchedAt: r.watched_at,
     runtime: r.runtime,
+    rating: r.rating ?? undefined,
     source: (r.source as WatchRecord['source']) ?? 'import',
   };
 }

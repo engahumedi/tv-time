@@ -57,6 +57,42 @@ export async function isWatched(id: string): Promise<boolean> {
   return (await db.watches.get(id)) !== undefined;
 }
 
+export async function getWatch(id: string): Promise<WatchRecord | undefined> {
+  return db.watches.get(id);
+}
+
+/**
+ * Set the user's 1–5 star rating for an episode. Rating implies watched, so
+ * this also creates the watch record (preserving any existing watched date).
+ */
+export async function rateEpisode(
+  ep: Episode,
+  rating: number,
+  defaultRuntime = 30,
+): Promise<void> {
+  const existing = await db.watches.get(ep.id);
+  const record: WatchRecord = {
+    episodeId: ep.id,
+    showId: ep.showId,
+    seasonNumber: ep.seasonNumber,
+    episodeNumber: ep.episodeNumber,
+    watchedAt: existing?.watchedAt ?? Date.now(),
+    runtime: existing?.runtime ?? ep.runtime ?? defaultRuntime,
+    rating: rating || undefined,
+    source: existing?.source ?? 'manual',
+  };
+  await db.watches.put(record);
+  void cloudUpsertWatches([record]);
+  await recomputeStatus(ep.showId);
+}
+
+/** Set the user's 1–10 rating for a whole show. */
+export async function rateShow(showId: number, rating: number): Promise<void> {
+  await db.shows.update(showId, { userRating: rating || undefined });
+  const show = await db.shows.get(showId);
+  if (show) void cloudUpsertShow(show);
+}
+
 /** Mark a single episode watched. Idempotent — same episode never duplicates. */
 export async function markWatched(
   ep: Episode,
@@ -64,6 +100,7 @@ export async function markWatched(
   source: WatchRecord['source'] = 'manual',
   defaultRuntime = 30,
 ): Promise<void> {
+  const existing = await db.watches.get(ep.id);
   const record: WatchRecord = {
     episodeId: ep.id,
     showId: ep.showId,
@@ -71,6 +108,7 @@ export async function markWatched(
     episodeNumber: ep.episodeNumber,
     watchedAt,
     runtime: ep.runtime ?? defaultRuntime,
+    rating: existing?.rating,
     source,
   };
   await db.watches.put(record);

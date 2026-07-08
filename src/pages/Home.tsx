@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useToWatch, useLibrary } from '../lib/hooks';
-import { Poster } from '../components/Poster';
+import { img } from '../lib/tmdb';
 import { ShowCard } from '../components/ShowCard';
 import { EmptyState } from '../components/EmptyState';
 import { markWatched } from '../lib/repo';
@@ -103,52 +103,69 @@ function UpNextCard({
     celebrate('small');
   }
 
+  const still = img(episode.stillPath || show.backdropPath, 'w500');
+
   return (
-    <motion.div layout className="card flex items-center gap-3 p-3">
-      <Link to={`/show/${show.id}`} className="shrink-0">
-        <Poster
-          path={show.posterPath}
-          alt={show.name}
-          size="w200"
-          className="h-24 w-16 rounded-lg"
-        />
-      </Link>
-      <Link to={`/show/${show.id}`} className="min-w-0 flex-1">
-        <p className="truncate font-semibold">{show.name}</p>
-        <p className="mt-0.5 text-sm text-gold-400">
-          S{episode.seasonNumber} · E{episode.episodeNumber}
-        </p>
-        <p className="truncate text-xs text-slate-400">{episode.name}</p>
-        {episode.airDate && (
-          <p className="mt-0.5 text-[11px] text-slate-500">
-            {t('home.aired', { date: formatDate(episode.airDate, lang) })}
-          </p>
-        )}
+    <motion.div
+      layout
+      className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-navy-800"
+    >
+      <Link to={`/show/${show.id}`} className="block">
+        {/* Episode thumbnail (16:9) */}
+        <div className="relative aspect-video w-full overflow-hidden">
+          {still ? (
+            <img
+              src={still}
+              alt=""
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-end p-3"
+              style={{
+                background:
+                  'radial-gradient(120% 100% at 50% 0%, rgba(255,91,69,0.22), transparent 60%), #14131a',
+              }}
+            >
+              <span className="text-3xl opacity-40">🎬</span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/20 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-3">
+            <p className="truncate font-bold leading-tight">{show.name}</p>
+            <p className="mt-0.5 truncate text-xs text-zinc-300">
+              <span className="text-gold-400">
+                S{episode.seasonNumber} · E{episode.episodeNumber}
+              </span>{' '}
+              — {episode.name}
+            </p>
+          </div>
+        </div>
       </Link>
       <button
         onClick={onWatch}
-        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gold/15 text-gold-400 transition-all hover:bg-gold hover:text-navy-950 active:scale-90"
+        className="absolute end-2.5 top-2.5 grid h-10 w-10 place-items-center rounded-full bg-navy-950/70 text-gold-400 backdrop-blur transition-all hover:bg-gold hover:text-white active:scale-90"
         aria-label={t('show.mark_watched')}
+        title={t('show.mark_watched')}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 6 9 17l-5-5" />
         </svg>
       </button>
+      {episode.airDate && (
+        <span className="pointer-events-none absolute start-2.5 top-2.5 rounded-md bg-navy-950/70 px-1.5 py-0.5 text-[10px] text-zinc-300 backdrop-blur">
+          {formatDate(episode.airDate, lang)}
+        </span>
+      )}
     </motion.div>
   );
 }
 
 function RailSkeleton() {
   return (
-    <div className="space-y-3 pt-6">
+    <div className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-3">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="card flex items-center gap-3 p-3">
-          <div className="h-24 w-16 rounded-lg shimmer" />
-          <div className="flex-1 space-y-2">
-            <div className="h-4 w-1/2 rounded shimmer" />
-            <div className="h-3 w-1/3 rounded shimmer" />
-          </div>
-        </div>
+        <div key={i} className="aspect-video rounded-2xl shimmer" />
       ))}
     </div>
   );

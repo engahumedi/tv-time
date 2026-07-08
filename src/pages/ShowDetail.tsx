@@ -18,12 +18,16 @@ import {
   markShowWatched,
   removeShow,
   setStatus,
+  rateShow,
 } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { getImdbRating, type ImdbRating } from '../lib/omdb';
+import { formatDate } from '../lib/format';
 import { Poster } from '../components/Poster';
 import { StatusBadge } from '../components/StatusBadge';
 import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
+import { StarRating } from '../components/StarRating';
+import { EpisodeModal } from '../components/EpisodeModal';
 import type { Show, Episode, ShowStatus } from '../types';
 
 const STATUSES: ShowStatus[] = [
@@ -37,7 +41,7 @@ const STATUSES: ShowStatus[] = [
 export function ShowDetail() {
   const { id } = useParams();
   const showId = Number(id);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const inLibrary = useIsInLibrary(showId);
@@ -51,6 +55,7 @@ export function ShowDetail() {
   const [error, setError] = useState(false);
   const [adding, setAdding] = useState(false);
   const [imdb, setImdb] = useState<ImdbRating | null>(null);
+  const [selectedEp, setSelectedEp] = useState<Episode | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,8 +143,21 @@ export function ShowDetail() {
 
   return (
     <div className="-mx-4 lg:-mx-10">
+      {/* Sticky back bar */}
+      <div className="pointer-events-none sticky top-0 z-20 flex items-center px-4 py-3 lg:px-10">
+        <button
+          onClick={() => navigate(-1)}
+          className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-navy-950/60 text-zinc-100 backdrop-blur transition-colors hover:bg-navy-900"
+          aria-label={t('common.close')}
+        >
+          <svg className="rtl-flip" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+      </div>
+
       {/* Backdrop hero */}
-      <div className="relative h-56 w-full overflow-hidden lg:h-[22rem]">
+      <div className="relative -mt-16 h-56 w-full overflow-hidden lg:h-[22rem]">
         {show.backdropPath ? (
           <img
             src={img(show.backdropPath, 'w780') ?? ''}
@@ -147,18 +165,16 @@ export function ShowDetail() {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="h-full w-full bg-navy-800" />
+          // Graceful fallback when a show has no backdrop image.
+          <div
+            className="h-full w-full"
+            style={{
+              background:
+                'radial-gradient(120% 90% at 50% -10%, rgba(255,91,69,0.28), transparent 55%), #111015',
+            }}
+          />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent" />
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute start-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-navy-950/60 backdrop-blur"
-          aria-label={t('common.close')}
-        >
-          <svg className="rtl-flip" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/50 to-transparent" />
       </div>
 
       <div className="mx-auto max-w-4xl px-4 lg:px-10">
@@ -186,11 +202,18 @@ export function ShowDetail() {
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {show.genres.slice(0, 3).map((g) => (
-                <span key={g} className="chip bg-white/5 text-slate-300">
+                <span key={g} className="chip bg-white/5 text-zinc-300">
                   {g}
                 </span>
               ))}
             </div>
+            {inLibrary && storedShow && (
+              <p className="mt-2 text-xs text-zinc-500">
+                {t('show.added_on', {
+                  date: formatDate(storedShow.addedAt, i18n.language),
+                })}
+              </p>
+            )}
           </div>
         </div>
 
@@ -203,7 +226,9 @@ export function ShowDetail() {
                 onChange={(s) => setStatus(showId, s)}
               />
               <button
-                className="btn-ghost text-sm"
+                className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 text-zinc-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
+                aria-label={t('common.remove')}
+                title={t('common.remove')}
                 onClick={async () => {
                   if (confirm(t('show.remove_confirm'))) {
                     await removeShow(showId);
@@ -211,7 +236,9 @@ export function ShowDetail() {
                   }
                 }}
               >
-                {t('common.remove')}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
+                </svg>
               </button>
             </>
           ) : (
@@ -220,6 +247,27 @@ export function ShowDetail() {
             </button>
           )}
         </div>
+
+        {/* Your rating (out of 10) */}
+        {inLibrary && (
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/[0.07] bg-navy-800 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">{t('show.your_rating')}</p>
+              <p className="text-xs text-zinc-500">
+                {storedShow?.userRating
+                  ? t('show.out_of_ten', { n: storedShow.userRating })
+                  : t('show.rate_this')}
+              </p>
+            </div>
+            <StarRating
+              value={(storedShow?.userRating ?? 0) / 2}
+              allowHalf
+              size={26}
+              onChange={(v) => rateShow(showId, Math.round(v * 2))}
+              ariaLabel={t('show.your_rating')}
+            />
+          </div>
+        )}
 
         {inLibrary && totalCount > 0 && (
           <div className="mt-4">
@@ -280,12 +328,23 @@ export function ShowDetail() {
                   inLibrary={inLibrary}
                   defaultRuntime={show.episodeRuntime}
                   onToggle={toggleEpisode}
+                  onOpen={setSelectedEp}
                 />
               ))}
             </div>
           )}
         </section>
       </div>
+
+      {selectedEp && (
+        <EpisodeModal
+          episode={selectedEp}
+          show={show}
+          inLibrary={inLibrary}
+          lang={i18n.language}
+          onClose={() => setSelectedEp(null)}
+        />
+      )}
     </div>
   );
 }
@@ -341,6 +400,7 @@ function SeasonBlock({
   inLibrary,
   defaultRuntime,
   onToggle,
+  onOpen,
 }: {
   showId: number;
   seasonNumber: number;
@@ -349,6 +409,7 @@ function SeasonBlock({
   inLibrary: boolean;
   defaultRuntime: number;
   onToggle: (ep: Episode) => void;
+  onOpen: (ep: Episode) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(seasonNumber === 1);
@@ -414,14 +475,18 @@ function SeasonBlock({
               return (
                 <li
                   key={ep.id}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03]"
+                  className="flex items-center gap-2 px-2 py-1 hover:bg-white/[0.03]"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm">
-                      <span className="text-slate-500">{ep.episodeNumber}.</span>{' '}
-                      {ep.name}
-                    </p>
-                  </div>
+                  <button
+                    onClick={() => onOpen(ep)}
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-start"
+                  >
+                    <span className="w-6 shrink-0 text-center text-xs text-zinc-500">
+                      {ep.episodeNumber}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm">{ep.name}</span>
+                    <svg className="rtl-flip shrink-0 text-zinc-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                  </button>
                   <button
                     disabled={!inLibrary}
                     onClick={() => onToggle(ep)}

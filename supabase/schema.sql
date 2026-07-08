@@ -20,6 +20,7 @@ create table if not exists public.watches (
   episode    int    not null default 0,
   watched_at bigint not null default 0,
   runtime    int    not null default 0,
+  rating     int,
   source     text   not null default 'import',
   primary key (user_id, episode_id)
 );

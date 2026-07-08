@@ -27,6 +27,8 @@ export interface Show {
   voteAverage?: number;
   /** IMDb id (e.g. "tt0903747"), used to look up the IMDb rating via OMDb. */
   imdbId?: string;
+  /** The user's own rating for the show, 1–10 (undefined when unrated). */
+  userRating?: number;
   /** User-controlled status. */
   status: ShowStatus;
   /** When the show was added to the library. */
@@ -59,6 +61,8 @@ export interface WatchRecord {
   watchedAt: number;
   /** Runtime in minutes captured at watch time, so stats stay stable. */
   runtime: number;
+  /** The user's rating for this episode, 1–5 stars (undefined when unrated). */
+  rating?: number;
   /** Where this record came from. */
   source: 'manual' | 'import';
 }

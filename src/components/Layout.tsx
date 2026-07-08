@@ -1,8 +1,10 @@
-import { Outlet, Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BottomNav } from './BottomNav';
 import { Sidebar, Logo } from './Sidebar';
 import { LanguageToggle } from './LanguageToggle';
+import { resetConfetti } from '../lib/celebrate';
 
 /**
  * Responsive app shell.
@@ -11,6 +13,13 @@ import { LanguageToggle } from './LanguageToggle';
  */
 export function Layout() {
   const { t } = useTranslation();
+  const location = useLocation();
+
+  // Clear any lingering celebration confetti when the route changes.
+  useEffect(() => {
+    resetConfetti();
+  }, [location.pathname]);
+
   return (
     <div className="min-h-full">
       <Sidebar />

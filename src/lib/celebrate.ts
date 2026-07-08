@@ -1,5 +1,10 @@
 import confetti from 'canvas-confetti';
 
+/** Immediately clear any confetti still on screen (e.g. when navigating away). */
+export function resetConfetti(): void {
+  confetti.reset();
+}
+
 /** A subtle gold burst — used when finishing a season or a show. */
 export function celebrate(intensity: 'small' | 'big' = 'small'): void {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;

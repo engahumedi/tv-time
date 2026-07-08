@@ -155,26 +155,26 @@ export function Profile() {
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-400">
                 {t('profile.top_shows')}
               </h2>
-              <div className="space-y-2">
+              <div className="grid gap-2 lg:grid-cols-2">
                 {stats.topShows.map(({ show, count }, i) => (
                   <Link
                     key={show.id}
                     to={`/show/${show.id}`}
-                    className="card flex items-center gap-3 p-2.5"
+                    className="card flex items-center gap-3 p-2.5 transition-colors hover:bg-navy-700"
                   >
-                    <span className="w-5 text-center text-lg font-extrabold text-gold-400">
+                    <span className="w-5 shrink-0 text-center text-lg font-extrabold text-gold-400">
                       {i + 1}
                     </span>
                     <Poster
                       path={show.posterPath}
                       alt={show.name}
                       size="w200"
-                      className="h-14 w-10 rounded-md"
+                      className="h-14 w-10 shrink-0 rounded-md"
                     />
                     <span className="min-w-0 flex-1 truncate font-semibold">
                       {show.name}
                     </span>
-                    <span className="text-sm text-slate-400">
+                    <span className="shrink-0 text-sm text-zinc-400">
                       {formatNumber(count, lang)} {t('common.episodes')}
                     </span>
                   </Link>
