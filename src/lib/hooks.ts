@@ -1,6 +1,39 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import type { Show, Episode, WatchRecord } from '../types';
+import type { Show, Episode, WatchRecord, ShowList } from '../types';
+
+export function useLists(): ShowList[] | undefined {
+  return useLiveQuery(() => db.lists.orderBy('createdAt').toArray());
+}
+
+export interface CalendarItem {
+  show: Show;
+  episode: Episode;
+  ts: number;
+}
+
+/**
+ * Episodes from followed shows around now: everything from ~2 weeks ago
+ * forward, so the calendar shows both recently-aired and upcoming episodes.
+ */
+export function useCalendar(): CalendarItem[] | undefined {
+  return useLiveQuery(async () => {
+    const shows = await db.shows.toArray();
+    const showById = new Map(shows.map((s) => [s.id, s]));
+    const since = Date.now() - 14 * 864e5;
+    const items: CalendarItem[] = [];
+    for (const show of shows) {
+      const eps = await db.episodes.where('showId').equals(show.id).toArray();
+      for (const e of eps) {
+        if (!e.airDate) continue;
+        const ts = new Date(e.airDate).getTime();
+        if (Number.isNaN(ts) || ts < since) continue;
+        items.push({ show: showById.get(show.id)!, episode: e, ts });
+      }
+    }
+    return items.sort((a, b) => a.ts - b.ts).slice(0, 100);
+  });
+}
 
 /** The user's followed shows, newest first. Reactively updates on any change. */
 export function useLibrary(): Show[] | undefined {

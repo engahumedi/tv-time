@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { db } from './db';
 import { getAllEpisodes } from './tmdb';
-import type { Show, WatchRecord } from '../types';
+import type { Show, WatchRecord, ShowList } from '../types';
 
 /**
  * Two-way sync between the local IndexedDB cache and the user's rows in
@@ -49,6 +49,7 @@ function watchToRow(w: WatchRecord) {
     watched_at: w.watchedAt,
     runtime: w.runtime,
     rating: w.rating ?? null,
+    note: w.note ?? null,
     source: w.source,
   };
 }
@@ -61,6 +62,7 @@ interface WatchRow {
   watched_at: number;
   runtime: number;
   rating: number | null;
+  note: string | null;
   source: string;
 }
 
@@ -73,8 +75,57 @@ function rowToWatch(r: WatchRow): WatchRecord {
     watchedAt: r.watched_at,
     runtime: r.runtime,
     rating: r.rating ?? undefined,
+    note: r.note ?? undefined,
     source: (r.source as WatchRecord['source']) ?? 'import',
   };
+}
+
+// ---- lists ----
+
+function listToRow(l: ShowList) {
+  return {
+    user_id: currentUserId,
+    id: l.id,
+    name: l.name,
+    show_ids: l.showIds,
+    created_at: l.createdAt,
+  };
+}
+
+interface ListRow {
+  id: string;
+  name: string;
+  show_ids: number[];
+  created_at: number;
+}
+
+function rowToList(r: ListRow): ShowList {
+  return {
+    id: r.id,
+    name: r.name,
+    showIds: r.show_ids ?? [],
+    createdAt: r.created_at,
+  };
+}
+
+export async function cloudUpsertList(list: ShowList): Promise<void> {
+  if (!active()) return;
+  try {
+    await supabase!.from('lists').upsert(listToRow(list), {
+      onConflict: 'user_id,id',
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function cloudDeleteList(id: string): Promise<void> {
+  if (!active()) return;
+  try {
+    await supabase!.from('lists').delete().match({ user_id: currentUserId, id });
+  } catch {
+    /* ignore */
+  }
 }
 
 // ---- per-action mirrors (called from repo after local writes) ----
@@ -139,6 +190,12 @@ async function pushLocal(): Promise<void> {
       .upsert(shows.map(showToRow), { onConflict: 'user_id,show_id' });
   }
   await cloudUpsertWatches(watches);
+  const lists = await db.lists.toArray();
+  if (lists.length) {
+    await supabase!
+      .from('lists')
+      .upsert(lists.map(listToRow), { onConflict: 'user_id,id' });
+  }
 }
 
 /** Pull the account's data down and merge it into the local cache. */
@@ -152,6 +209,13 @@ async function pull(): Promise<void> {
   const watches = (watchRows ?? []).map(rowToWatch);
   if (shows.length) await db.shows.bulkPut(shows);
   if (watches.length) await db.watches.bulkPut(watches);
+
+  const { data: listRows } = await supabase!
+    .from('lists')
+    .select('*')
+    .eq('user_id', currentUserId);
+  const lists = (listRows ?? []).map(rowToList);
+  if (lists.length) await db.lists.bulkPut(lists);
 
   // Imported lazily to avoid a static import cycle with repo.ts.
   const { recomputeStatus } = await import('./repo');

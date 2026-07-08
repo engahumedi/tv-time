@@ -1,12 +1,25 @@
 import { NavLink, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { NAV_ITEMS, IMPORT_ITEM, type NavItem } from './navItems';
+import {
+  NAV_ITEMS,
+  CALENDAR_ITEM,
+  LISTS_ITEM,
+  IMPORT_ITEM,
+  type NavItem,
+} from './navItems';
 import { LanguageToggle } from './LanguageToggle';
 
 /** Persistent left navigation for tablet/desktop (hidden on mobile). */
 export function Sidebar() {
   const { t } = useTranslation();
-  const items = [...NAV_ITEMS, IMPORT_ITEM];
+  const items = [
+    NAV_ITEMS[0],
+    NAV_ITEMS[1],
+    CALENDAR_ITEM,
+    LISTS_ITEM,
+    NAV_ITEMS[2],
+    IMPORT_ITEM,
+  ];
 
   return (
     <aside className="fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-white/[0.07] bg-navy-900 px-4 py-6 lg:flex">

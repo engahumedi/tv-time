@@ -45,6 +45,17 @@ export function Profile() {
 
       <AccountCard />
 
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/wrapped" className="card flex items-center gap-3 p-4 hover:bg-navy-700">
+          <span className="text-2xl">🎬</span>
+          <span className="font-semibold">{t('profile.year_in_review')}</span>
+        </Link>
+        <Link to="/lists" className="card flex items-center gap-3 p-4 hover:bg-navy-700">
+          <span className="text-2xl">📚</span>
+          <span className="font-semibold">{t('profile.my_lists')}</span>
+        </Link>
+      </div>
+
       {!hasData ? (
         <EmptyState
           icon="✨"

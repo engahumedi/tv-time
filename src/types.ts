@@ -29,6 +29,8 @@ export interface Show {
   imdbId?: string;
   /** The user's own rating for the show, 1–10 (undefined when unrated). */
   userRating?: number;
+  /** Free-form tags the user attached to the show. */
+  tags?: string[];
   /** User-controlled status. */
   status: ShowStatus;
   /** When the show was added to the library. */
@@ -63,8 +65,18 @@ export interface WatchRecord {
   runtime: number;
   /** The user's rating for this episode, 1–5 stars (undefined when unrated). */
   rating?: number;
+  /** A personal note the user wrote about this episode. */
+  note?: string;
   /** Where this record came from. */
   source: 'manual' | 'import';
+}
+
+/** A user-created collection of shows (e.g. "Anime", "Comfort watches"). */
+export interface ShowList {
+  id: string;
+  name: string;
+  showIds: number[];
+  createdAt: number;
 }
 
 export type Language = 'en' | 'ar';

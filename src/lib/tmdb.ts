@@ -98,6 +98,122 @@ export async function searchShows(query: string): Promise<Show[]> {
   return data.results.map((r) => searchResultToShow(r, genres));
 }
 
+/** Fetch a list of shows from any TMDB list endpoint, via the proxy. */
+async function fetchShowList(
+  path: string,
+  params: Record<string, string> = {},
+): Promise<Show[]> {
+  if (!hasTmdbKey) return [];
+  const [genres, data] = await Promise.all([
+    loadGenres(),
+    tmdb<{ results: TmdbSearchResult[] }>(path, {
+      language: tmdbLang(),
+      ...params,
+    }),
+  ]);
+  return data.results
+    .filter((r) => r.poster_path)
+    .map((r) => searchResultToShow(r, genres));
+}
+
+export const getTrending = (): Promise<Show[]> =>
+  fetchShowList('/trending/tv/week');
+export const getTopRated = (): Promise<Show[]> =>
+  fetchShowList('/tv/top_rated', { 'vote_count.gte': '300' });
+export const discoverByGenre = (genreId: number): Promise<Show[]> =>
+  fetchShowList('/discover/tv', {
+    with_genres: String(genreId),
+    sort_by: 'popularity.desc',
+    'vote_count.gte': '100',
+  });
+export const getRecommendations = (showId: number): Promise<Show[]> =>
+  showId < 0 ? Promise.resolve([]) : fetchShowList(`/tv/${showId}/recommendations`);
+
+/** The TMDB TV genre list, as {id, name}. */
+export async function getGenreList(): Promise<{ id: number; name: string }[]> {
+  const map = await loadGenres();
+  return Object.entries(map).map(([id, name]) => ({ id: Number(id), name }));
+}
+
+export interface Person {
+  id: number;
+  name: string;
+  profilePath: string | null;
+  knownFor?: string;
+}
+
+export async function searchPeople(query: string): Promise<Person[]> {
+  if (!hasTmdbKey || !query.trim()) return [];
+  const data = await tmdb<{
+    results: {
+      id: number;
+      name: string;
+      profile_path: string | null;
+      known_for_department: string;
+    }[];
+  }>('/search/person', { query, language: tmdbLang() });
+  return data.results.map((p) => ({
+    id: p.id,
+    name: p.name,
+    profilePath: p.profile_path,
+    knownFor: p.known_for_department,
+  }));
+}
+
+export async function getPersonCredits(
+  id: number,
+): Promise<{ person: Person; shows: Show[] }> {
+  const genres = await loadGenres();
+  const data = await tmdb<{
+    id: number;
+    name: string;
+    profile_path: string | null;
+    tv_credits: { cast: TmdbSearchResult[] };
+  }>(`/person/${id}`, {
+    append_to_response: 'tv_credits',
+    language: tmdbLang(),
+  });
+  const seen = new Set<number>();
+  const shows = (data.tv_credits?.cast ?? [])
+    .filter((r) => r.poster_path && !seen.has(r.id) && seen.add(r.id))
+    .map((r) => searchResultToShow(r, genres))
+    .sort((a, b) => (b.voteAverage ?? 0) - (a.voteAverage ?? 0));
+  return {
+    person: { id: data.id, name: data.name, profilePath: data.profile_path },
+    shows,
+  };
+}
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profilePath: string | null;
+}
+
+/** Trailer (YouTube key) and top cast for a show. */
+export async function getShowExtras(
+  showId: number,
+): Promise<{ trailerKey: string | null; cast: CastMember[] }> {
+  if (!hasTmdbKey || showId < 0) return { trailerKey: null, cast: [] };
+  const data = await tmdb<{
+    videos: { results: { key: string; site: string; type: string; official: boolean }[] };
+    credits: { cast: { id: number; name: string; character: string; profile_path: string | null }[] };
+  }>(`/tv/${showId}`, { append_to_response: 'videos,credits', language: 'en-US' });
+  const vids = data.videos?.results ?? [];
+  const trailer =
+    vids.find((v) => v.site === 'YouTube' && v.type === 'Trailer' && v.official) ||
+    vids.find((v) => v.site === 'YouTube' && v.type === 'Trailer') ||
+    vids.find((v) => v.site === 'YouTube');
+  const cast = (data.credits?.cast ?? []).slice(0, 12).map((c) => ({
+    id: c.id,
+    name: c.name,
+    character: c.character,
+    profilePath: c.profile_path,
+  }));
+  return { trailerKey: trailer?.key ?? null, cast };
+}
+
 function searchResultToShow(
   r: TmdbSearchResult,
   genres: Record<number, string>,

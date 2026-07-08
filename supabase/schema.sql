@@ -21,8 +21,18 @@ create table if not exists public.watches (
   watched_at bigint not null default 0,
   runtime    int    not null default 0,
   rating     int,
+  note       text,
   source     text   not null default 'import',
   primary key (user_id, episode_id)
+);
+
+create table if not exists public.lists (
+  id         text   not null,
+  user_id    uuid   not null references auth.users (id) on delete cascade,
+  name       text   not null,
+  show_ids   jsonb  not null default '[]'::jsonb,
+  created_at bigint not null default 0,
+  primary key (user_id, id)
 );
 
 create index if not exists watches_user_show_idx
@@ -31,6 +41,7 @@ create index if not exists watches_user_show_idx
 -- Row Level Security: every row is private to its owner.
 alter table public.shows   enable row level security;
 alter table public.watches enable row level security;
+alter table public.lists   enable row level security;
 
 drop policy if exists "own shows" on public.shows;
 create policy "own shows" on public.shows
@@ -40,6 +51,12 @@ create policy "own shows" on public.shows
 
 drop policy if exists "own watches" on public.watches;
 create policy "own watches" on public.watches
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own lists" on public.lists;
+create policy "own lists" on public.lists
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

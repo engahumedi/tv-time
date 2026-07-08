@@ -5,8 +5,16 @@ import {
   cloudDeleteShow,
   cloudUpsertWatches,
   cloudDeleteWatch,
+  cloudUpsertList,
+  cloudDeleteList,
 } from './cloud';
-import type { Show, Episode, WatchRecord, ShowStatus } from '../types';
+import type {
+  Show,
+  Episode,
+  WatchRecord,
+  ShowStatus,
+  ShowList,
+} from '../types';
 
 /**
  * Repository layer — the single place that mutates the database. Keeping all
@@ -91,6 +99,79 @@ export async function rateShow(showId: number, rating: number): Promise<void> {
   await db.shows.update(showId, { userRating: rating || undefined });
   const show = await db.shows.get(showId);
   if (show) void cloudUpsertShow(show);
+}
+
+/** Replace the tags on a show. */
+export async function setTags(showId: number, tags: string[]): Promise<void> {
+  const clean = [...new Set(tags.map((t) => t.trim()).filter(Boolean))];
+  await db.shows.update(showId, { tags: clean.length ? clean : undefined });
+  const show = await db.shows.get(showId);
+  if (show) void cloudUpsertShow(show);
+}
+
+/** Save a personal note for an episode (implies the episode is tracked). */
+export async function setEpisodeNote(
+  ep: Episode,
+  note: string,
+  defaultRuntime = 30,
+): Promise<void> {
+  const existing = await db.watches.get(ep.id);
+  const record: WatchRecord = {
+    episodeId: ep.id,
+    showId: ep.showId,
+    seasonNumber: ep.seasonNumber,
+    episodeNumber: ep.episodeNumber,
+    watchedAt: existing?.watchedAt ?? Date.now(),
+    runtime: existing?.runtime ?? ep.runtime ?? defaultRuntime,
+    rating: existing?.rating,
+    note: note.trim() || undefined,
+    source: existing?.source ?? 'manual',
+  };
+  await db.watches.put(record);
+  void cloudUpsertWatches([record]);
+}
+
+// ---- custom lists ----
+
+export async function createList(name: string): Promise<ShowList> {
+  const list: ShowList = {
+    id:
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `list_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    name: name.trim() || 'List',
+    showIds: [],
+    createdAt: Date.now(),
+  };
+  await db.lists.put(list);
+  void cloudUpsertList(list);
+  return list;
+}
+
+export async function renameList(id: string, name: string): Promise<void> {
+  await db.lists.update(id, { name: name.trim() || 'List' });
+  const l = await db.lists.get(id);
+  if (l) void cloudUpsertList(l);
+}
+
+export async function deleteList(id: string): Promise<void> {
+  await db.lists.delete(id);
+  void cloudDeleteList(id);
+}
+
+/** Add/remove a show from a list. */
+export async function toggleShowInList(
+  id: string,
+  showId: number,
+): Promise<void> {
+  const l = await db.lists.get(id);
+  if (!l) return;
+  const has = l.showIds.includes(showId);
+  l.showIds = has
+    ? l.showIds.filter((x) => x !== showId)
+    : [...l.showIds, showId];
+  await db.lists.put(l);
+  void cloudUpsertList(l);
 }
 
 /** Mark a single episode watched. Idempotent — same episode never duplicates. */

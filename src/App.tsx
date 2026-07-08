@@ -19,6 +19,15 @@ const Profile = lazy(() =>
 const Import = lazy(() =>
   import('./pages/Import').then((m) => ({ default: m.Import })),
 );
+const Calendar = lazy(() =>
+  import('./pages/Calendar').then((m) => ({ default: m.Calendar })),
+);
+const Lists = lazy(() =>
+  import('./pages/Lists').then((m) => ({ default: m.Lists })),
+);
+const Wrapped = lazy(() =>
+  import('./pages/Wrapped').then((m) => ({ default: m.Wrapped })),
+);
 
 function Spinner() {
   return (
@@ -68,6 +77,30 @@ export default function App() {
           element={
             <Suspense fallback={<Spinner />}>
               <Import />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <Calendar />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/lists"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <Lists />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/wrapped"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <Wrapped />
             </Suspense>
           }
         />

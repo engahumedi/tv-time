@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { img } from '../lib/tmdb';
 import { useWatch } from '../lib/hooks';
-import { markWatched, unmarkWatched, rateEpisode } from '../lib/repo';
+import { useEffect, useRef, useState } from 'react';
+import { markWatched, unmarkWatched, rateEpisode, setEpisodeNote } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
 import { StarRating } from './StarRating';
@@ -26,6 +27,29 @@ export function EpisodeModal({
   const watch = useWatch(episode.id);
   const isWatched = Boolean(watch);
   const still = img(episode.stillPath, 'w500');
+
+  // Local note state with debounced save.
+  const [note, setNote] = useState('');
+  const [savedFlash, setSavedFlash] = useState(false);
+  const noteTimer = useRef<ReturnType<typeof setTimeout>>();
+  const loadedFor = useRef<string | null>(null);
+  useEffect(() => {
+    // Seed the textarea once per episode from the stored note.
+    if (watch !== undefined && loadedFor.current !== episode.id) {
+      setNote(watch?.note ?? '');
+      loadedFor.current = episode.id;
+    }
+  }, [watch, episode.id]);
+
+  function onNoteChange(v: string) {
+    setNote(v);
+    clearTimeout(noteTimer.current);
+    noteTimer.current = setTimeout(async () => {
+      await setEpisodeNote(episode, v, show.episodeRuntime);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    }, 700);
+  }
 
   async function toggleWatched() {
     if (isWatched) await unmarkWatched(episode.id, episode.showId);
@@ -101,6 +125,27 @@ export function EpisodeModal({
                   value={watch?.rating ?? 0}
                   onChange={(r) => rateEpisode(episode, r, show.episodeRuntime)}
                   ariaLabel={t('episode.rate')}
+                />
+              </div>
+
+              {/* Personal note */}
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">
+                    {t('episode.note')}
+                  </span>
+                  {savedFlash && (
+                    <span className="text-xs text-emerald-300">
+                      {t('episode.note_saved')}
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  value={note}
+                  onChange={(e) => onNoteChange(e.target.value)}
+                  placeholder={t('episode.note_placeholder')}
+                  rows={3}
+                  className="w-full resize-none rounded-xl border border-white/[0.08] bg-navy-700 px-3 py-2 text-sm outline-none focus:border-gold/50"
                 />
               </div>
 

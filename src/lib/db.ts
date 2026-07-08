@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Show, Episode, WatchRecord } from '../types';
+import type { Show, Episode, WatchRecord, ShowList } from '../types';
 
 /**
  * Local-first storage. Everything the user tracks lives in IndexedDB, so the
@@ -10,6 +10,7 @@ export class ShowTrackDB extends Dexie {
   shows!: Table<Show, number>;
   episodes!: Table<Episode, string>;
   watches!: Table<WatchRecord, string>;
+  lists!: Table<ShowList, string>;
 
   constructor() {
     super('showtrack');
@@ -19,6 +20,10 @@ export class ShowTrackDB extends Dexie {
       episodes: 'id, showId, [showId+seasonNumber], airDate',
       // watches keyed by episodeId => re-importing can never duplicate a watch.
       watches: 'episodeId, showId, watchedAt, [showId+seasonNumber]',
+    });
+    // v2 adds user-created lists.
+    this.version(2).stores({
+      lists: 'id, createdAt',
     });
   }
 }

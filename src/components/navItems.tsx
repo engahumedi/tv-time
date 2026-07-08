@@ -37,6 +37,28 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+export const CALENDAR_ITEM: NavItem = {
+  to: '/calendar',
+  key: 'calendar',
+  icon: (
+    <>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </>
+  ),
+};
+
+export const LISTS_ITEM: NavItem = {
+  to: '/lists',
+  key: 'lists',
+  icon: (
+    <>
+      <path d="M8 6h13M8 12h13M8 18h13" />
+      <path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </>
+  ),
+};
+
 export const IMPORT_ITEM: NavItem = {
   to: '/import',
   key: 'import',

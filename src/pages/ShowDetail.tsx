@@ -19,6 +19,7 @@ import {
   removeShow,
   setStatus,
   rateShow,
+  setTags,
 } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { getImdbRating, type ImdbRating } from '../lib/omdb';
@@ -28,6 +29,8 @@ import { StatusBadge } from '../components/StatusBadge';
 import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { EpisodeModal } from '../components/EpisodeModal';
+import { ShowExtras } from '../components/ShowExtras';
+import { ListPickerModal } from '../components/ListPickerModal';
 import type { Show, Episode, ShowStatus } from '../types';
 
 const STATUSES: ShowStatus[] = [
@@ -56,6 +59,8 @@ export function ShowDetail() {
   const [adding, setAdding] = useState(false);
   const [imdb, setImdb] = useState<ImdbRating | null>(null);
   const [selectedEp, setSelectedEp] = useState<Episode | null>(null);
+  const [showLists, setShowLists] = useState(false);
+  const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -269,6 +274,50 @@ export function ShowDetail() {
           </div>
         )}
 
+        {/* Tags + lists */}
+        {inLibrary && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {(storedShow?.tags ?? []).map((tag) => (
+              <span key={tag} className="chip group bg-white/[0.06] text-zinc-200">
+                {tag}
+                <button
+                  className="ms-1.5 text-zinc-500 hover:text-rose-300"
+                  aria-label={t('common.remove')}
+                  onClick={() =>
+                    setTags(
+                      showId,
+                      (storedShow?.tags ?? []).filter((x) => x !== tag),
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!tagInput.trim()) return;
+                setTags(showId, [...(storedShow?.tags ?? []), tagInput]);
+                setTagInput('');
+              }}
+            >
+              <input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder={t('show.add_tag')}
+                className="w-32 rounded-full border border-white/10 bg-navy-700 px-3 py-1 text-xs outline-none focus:border-gold/50"
+              />
+            </form>
+            <button
+              onClick={() => setShowLists(true)}
+              className="chip bg-gold/15 text-gold-400 hover:bg-gold/25"
+            >
+              + {t('show.add_to_list')}
+            </button>
+          </div>
+        )}
+
         {inLibrary && totalCount > 0 && (
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-xs text-slate-400">
@@ -334,6 +383,9 @@ export function ShowDetail() {
             </div>
           )}
         </section>
+
+        {/* Trailer · cast · recommendations (live data) */}
+        <ShowExtras showId={showId} />
       </div>
 
       {selectedEp && (
@@ -344,6 +396,9 @@ export function ShowDetail() {
           lang={i18n.language}
           onClose={() => setSelectedEp(null)}
         />
+      )}
+      {showLists && (
+        <ListPickerModal showId={showId} onClose={() => setShowLists(false)} />
       )}
     </div>
   );
