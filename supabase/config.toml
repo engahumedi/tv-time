@@ -1,0 +1,7 @@
+# Supabase project config (used by the Supabase CLI).
+# The api function is a public proxy — it must be callable by visitors who
+# aren't signed in (Discover works before login), so JWT verification is off.
+# It is still protected by the project's anon key at the gateway.
+
+[functions.api]
+verify_jwt = false

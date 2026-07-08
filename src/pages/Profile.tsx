@@ -17,6 +17,7 @@ import { EmptyState } from '../components/EmptyState';
 import { Poster } from '../components/Poster';
 import { exportData, exportWatchesCsv, triggerDownload } from '../lib/exporter';
 import { clearAll } from '../lib/repo';
+import { AccountCard } from '../components/AccountCard';
 
 const GOLD = '#ff5b45';
 const GOLD_DIM = 'rgba(255,91,69,0.32)';
@@ -41,6 +42,8 @@ export function Profile() {
   return (
     <div className="space-y-6 pt-2">
       <h1 className="text-3xl font-extrabold lg:text-4xl">{t('profile.title')}</h1>
+
+      <AccountCard />
 
       {!hasData ? (
         <EmptyState

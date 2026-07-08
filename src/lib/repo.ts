@@ -1,5 +1,11 @@
 import { db } from './db';
 import { episodeId } from './ids';
+import {
+  cloudUpsertShow,
+  cloudDeleteShow,
+  cloudUpsertWatches,
+  cloudDeleteWatch,
+} from './cloud';
 import type { Show, Episode, WatchRecord, ShowStatus } from '../types';
 
 /**
@@ -18,11 +24,13 @@ export async function getAllShows(): Promise<Show[]> {
 export async function upsertShow(show: Show): Promise<void> {
   const existing = await db.shows.get(show.id);
   // Preserve user-controlled fields when re-adding a show.
-  await db.shows.put({
+  const merged: Show = {
     ...show,
     status: existing?.status ?? show.status,
     addedAt: existing?.addedAt ?? show.addedAt,
-  });
+  };
+  await db.shows.put(merged);
+  void cloudUpsertShow(merged);
 }
 
 export async function saveEpisodes(episodes: Episode[]): Promise<void> {
@@ -66,11 +74,13 @@ export async function markWatched(
     source,
   };
   await db.watches.put(record);
+  void cloudUpsertWatches([record]);
   await recomputeStatus(ep.showId);
 }
 
 export async function unmarkWatched(id: string, showId: number): Promise<void> {
   await db.watches.delete(id);
+  void cloudDeleteWatch(id);
   await recomputeStatus(showId);
 }
 
@@ -94,6 +104,7 @@ export async function markSeasonWatched(
     source: 'manual',
   }));
   if (records.length) await db.watches.bulkPut(records);
+  void cloudUpsertWatches(records);
   await recomputeStatus(showId);
 }
 
@@ -114,6 +125,7 @@ export async function markShowWatched(
     source: 'manual',
   }));
   if (records.length) await db.watches.bulkPut(records);
+  void cloudUpsertWatches(records);
   await recomputeStatus(showId);
 }
 
@@ -122,6 +134,8 @@ export async function setStatus(
   status: ShowStatus,
 ): Promise<void> {
   await db.shows.update(showId, { status });
+  const show = await db.shows.get(showId);
+  if (show) void cloudUpsertShow(show);
 }
 
 export async function removeShow(showId: number): Promise<void> {
@@ -130,6 +144,7 @@ export async function removeShow(showId: number): Promise<void> {
     await db.episodes.where('showId').equals(showId).delete();
     await db.watches.where('showId').equals(showId).delete();
   });
+  void cloudDeleteShow(showId);
 }
 
 /**
@@ -156,7 +171,10 @@ export async function recomputeStatus(showId: number): Promise<void> {
   } else {
     status = show.status === 'stopped' ? 'stopped' : 'watching';
   }
-  await db.shows.update(showId, { status });
+  if (status !== show.status) {
+    await db.shows.update(showId, { status });
+    void cloudUpsertShow({ ...show, status });
+  }
 }
 
 function hasAired(airDate: string | null): boolean {
@@ -185,7 +203,10 @@ export async function bulkImportWatches(
   );
   const duplicates = records.length - toInsert.length;
   const minutes = toInsert.reduce((a, r) => a + r.runtime, 0);
-  if (toInsert.length) await db.watches.bulkPut(toInsert);
+  if (toInsert.length) {
+    await db.watches.bulkPut(toInsert);
+    void cloudUpsertWatches(toInsert);
+  }
   return { imported: toInsert.length, duplicates, minutes };
 }
 

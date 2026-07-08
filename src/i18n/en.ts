@@ -146,6 +146,26 @@ export const en = {
     search_failed: 'We couldn’t reach the show database. Check your connection and try again.',
     load_failed: 'We couldn’t load this show right now. Please try again.',
   },
+  auth: {
+    account: 'Account',
+    sign_in: 'Sign in',
+    sign_up: 'Create account',
+    sign_out: 'Sign out',
+    email: 'Email',
+    password: 'Password',
+    sign_in_cta: 'Sign in to sync your progress',
+    sync_blurb: 'Save your library and watch history to your account and pick up on any device.',
+    signed_in_as: 'Signed in as',
+    syncing: 'Syncing your progress…',
+    have_account: 'Already have an account? Sign in',
+    no_account: 'New here? Create an account',
+    check_email: 'Check your inbox to confirm your email, then sign in.',
+    err_invalid: 'That email or password doesn’t look right. Please try again.',
+    err_exists: 'An account with this email already exists. Try signing in.',
+    err_weak: 'Please use a password of at least 6 characters.',
+    err_generic: 'We couldn’t complete that just now. Please try again.',
+    working: 'Please wait…',
+  },
 };
 
 export type Translation = typeof en;

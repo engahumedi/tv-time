@@ -38,9 +38,13 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # These are public, read-only client keys — they are embedded in the
-          # browser bundle by design (there is no way to hide a key in a static
-          # site). Rotate them anytime from your TMDB / OMDb account settings.
+          # Supabase (login + cloud sync + the key-hiding proxy). Blank until
+          # you add these repo secrets; when present, the app enables accounts
+          # and routes TMDB/OMDb through the secure proxy.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Direct client keys — used only until the proxy is live. Once
+          # Supabase is set up we remove these and rotate the keys (see SETUP.md).
           VITE_TMDB_API_KEY: '971118134814b1075d6e1a6c12be52ee'
           VITE_OMDB_API_KEY: '76cd25ca'
 

@@ -1,12 +1,18 @@
 import type { Show, Episode } from '../types';
 import { episodeId } from './ids';
 import { demoShows, demoEpisodes, searchDemoShows } from './demoData';
+import { functionsBase, supabaseAnonKey } from './supabase';
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY as string | undefined;
 const BASE = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p';
 
-export const hasTmdbKey = Boolean(API_KEY && API_KEY.trim());
+const PROXY = functionsBase();
+const useProxy = Boolean(PROXY);
+const hasDirectKey = Boolean(API_KEY && API_KEY.trim());
+
+/** True when real TMDB data is available — via the secure proxy or a dev key. */
+export const hasTmdbKey = hasDirectKey || useProxy;
 
 /** Current UI language mapped to a TMDB language tag (Arabic titles/overviews). */
 function tmdbLang(): string {
@@ -30,10 +36,22 @@ export function img(
 let genreMap: Record<number, string> | null = null;
 
 async function tmdb<T>(path: string, params: Record<string, string> = {}): Promise<T> {
-  const url = new URL(`${BASE}${path}`);
-  url.searchParams.set('api_key', API_KEY!);
+  // Prefer the secure proxy (keeps the API key server-side); fall back to a
+  // direct call when only a dev key is configured (local development).
+  let url: URL;
+  const headers: Record<string, string> = {};
+  if (useProxy) {
+    url = new URL(`${PROXY}/api/tmdb${path}`);
+    if (supabaseAnonKey) {
+      headers.apikey = supabaseAnonKey;
+      headers.Authorization = `Bearer ${supabaseAnonKey}`;
+    }
+  } else {
+    url = new URL(`${BASE}${path}`);
+    url.searchParams.set('api_key', API_KEY!);
+  }
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers });
   if (!res.ok) {
     throw new Error(`TMDB ${res.status}`);
   }

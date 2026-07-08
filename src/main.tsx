@@ -4,12 +4,15 @@ import { HashRouter } from 'react-router-dom';
 import './i18n';
 import './index.css';
 import App from './App';
+import { AuthProvider } from './lib/auth';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* HashRouter keeps deep links working on static hosts with no server. */}
-    <HashRouter>
-      <App />
-    </HashRouter>
+    <AuthProvider>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </AuthProvider>
   </StrictMode>,
 );

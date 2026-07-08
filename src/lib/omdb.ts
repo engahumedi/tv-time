@@ -1,6 +1,12 @@
-const OMDB_KEY = import.meta.env.VITE_OMDB_API_KEY as string | undefined;
+import { functionsBase, supabaseAnonKey } from './supabase';
 
-export const hasOmdbKey = Boolean(OMDB_KEY && OMDB_KEY.trim());
+const OMDB_KEY = import.meta.env.VITE_OMDB_API_KEY as string | undefined;
+const PROXY = functionsBase();
+const useProxy = Boolean(PROXY);
+const hasDirectKey = Boolean(OMDB_KEY && OMDB_KEY.trim());
+
+/** True when IMDb ratings can be fetched — via the proxy or a dev key. */
+export const hasOmdbKey = hasDirectKey || useProxy;
 
 export interface ImdbRating {
   rating: string; // e.g. "9.5"
@@ -13,7 +19,7 @@ interface OmdbResponse {
   imdbVotes?: string;
 }
 
-// Simple in-memory cache so revisiting a show doesn't re-hit OMDb.
+// In-memory cache so revisiting a show doesn't re-hit OMDb.
 const cache = new Map<string, ImdbRating | null>();
 
 /**
@@ -26,15 +32,22 @@ export async function getImdbRating(
   if (!hasOmdbKey || !imdbId) return null;
   if (cache.has(imdbId)) return cache.get(imdbId)!;
   try {
-    const res = await fetch(
-      `https://www.omdbapi.com/?apikey=${OMDB_KEY}&i=${encodeURIComponent(imdbId)}`,
-    );
+    let url: string;
+    const headers: Record<string, string> = {};
+    if (useProxy) {
+      url = `${PROXY}/api/omdb?i=${encodeURIComponent(imdbId)}`;
+      if (supabaseAnonKey) {
+        headers.apikey = supabaseAnonKey;
+        headers.Authorization = `Bearer ${supabaseAnonKey}`;
+      }
+    } else {
+      url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&i=${encodeURIComponent(imdbId)}`;
+    }
+    const res = await fetch(url, { headers });
     if (!res.ok) throw new Error(String(res.status));
     const data = (await res.json()) as OmdbResponse;
     const rating =
-      data.Response === 'True' &&
-      data.imdbRating &&
-      data.imdbRating !== 'N/A'
+      data.Response === 'True' && data.imdbRating && data.imdbRating !== 'N/A'
         ? { rating: data.imdbRating, votes: data.imdbVotes ?? '' }
         : null;
     cache.set(imdbId, rating);
