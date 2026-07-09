@@ -153,6 +153,9 @@ export const ar: Translation = {
     manage: 'أضِف إلى قوائم',
   },
   library: {
+    title: 'مكتبتك',
+    no_movies_title: 'لا أفلام بعد',
+    no_movies_body: 'الأفلام التي تحدّدها كمُشاهَدة أو تضيفها لقائمتك تظهر هنا.',
     search_placeholder: 'ابحث في مكتبتك…',
     sort: 'ترتيب',
     sort_recent: 'الأحدث إضافة',

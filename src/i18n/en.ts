@@ -151,6 +151,9 @@ export const en = {
     manage: 'Add to lists',
   },
   library: {
+    title: 'Your Library',
+    no_movies_title: 'No movies yet',
+    no_movies_body: 'Movies you mark watched or add to your watchlist show up here.',
     search_placeholder: 'Search your library…',
     sort: 'Sort',
     sort_recent: 'Recently added',

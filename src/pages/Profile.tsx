@@ -1,4 +1,4 @@
-import { useMemo, type ComponentType } from 'react';
+import { useMemo, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -36,6 +36,7 @@ import { getDisplayName } from '../lib/settings';
 import { useAuth } from '../lib/auth';
 import { ShowCard } from '../components/ShowCard';
 import { MovieCard } from '../components/MovieCard';
+import { NewListModal } from '../components/NewListModal';
 
 const GOLD = '#c9a24b';
 const GOLD_DIM = 'rgba(201,162,75,0.32)';
@@ -66,6 +67,7 @@ export function Profile() {
     [shows, watches],
   );
   const badges = useMemo(() => (stats ? computeBadges(stats) : []), [stats]);
+  const [creatingList, setCreatingList] = useState(false);
 
   if (!stats || !shows) {
     return <div className="pt-16 text-center text-faint">{t('common.loading')}</div>;
@@ -116,31 +118,25 @@ export function Profile() {
           <section>
             <SectionHeader label={t('profile.stats')} />
 
-            {/* Series */}
-            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gold">
-              {t('profile.series')}
-            </p>
-            <p className="mt-2 text-[11px] uppercase tracking-[0.15em] text-muted">
-              {t('profile.time_watched')}
-            </p>
-            <TimeLine time={time} lang={lang} />
-            <div className="mt-5 grid grid-cols-2 gap-8 sm:max-w-md">
-              <StatTile value={formatNumber(stats.totalEpisodes, lang)} label={t('profile.episodes_watched')} />
-              <StatTile value={formatNumber(stats.totalShows, lang)} label={t('profile.shows_watched')} />
-            </div>
-
-            {/* Movies */}
-            <div className="mt-8 border-t border-overlay/[0.08] pt-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gold">
-                {t('profile.movies')}
-              </p>
-              <p className="mt-2 text-[11px] uppercase tracking-[0.15em] text-muted">
-                {t('profile.time_watched')}
-              </p>
-              <TimeLine time={movieTime} lang={lang} />
-              <div className="mt-5 grid grid-cols-2 gap-8 sm:max-w-md">
-                <StatTile value={formatNumber(watchedMovies.length, lang)} label={t('profile.movies_watched')} />
-              </div>
+            {/* Series & Movies — side by side, TV Time style */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <StatCard
+                title={t('profile.series')}
+                time={time}
+                lang={lang}
+                lines={[
+                  { label: t('profile.episodes_watched'), value: formatNumber(stats.totalEpisodes, lang) },
+                  { label: t('profile.shows_watched'), value: formatNumber(stats.totalShows, lang) },
+                ]}
+              />
+              <StatCard
+                title={t('profile.movies')}
+                time={movieTime}
+                lang={lang}
+                lines={[
+                  { label: t('profile.movies_watched'), value: formatNumber(watchedMovies.length, lang) },
+                ]}
+              />
             </div>
 
             {/* Highlights — streaks, rating, completion */}
@@ -175,15 +171,15 @@ export function Profile() {
           <section>
             <SectionHeader label={t('profile.my_lists')} to="/lists" />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Link
-                to="/lists"
+              <button
+                onClick={() => setCreatingList(true)}
                 className="flex aspect-video flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-overlay/20 text-muted transition-colors hover:border-gold/50 hover:text-gold"
               >
                 <Plus size={20} strokeWidth={1.75} />
                 <span className="text-xs font-semibold uppercase tracking-wide">
                   {t('lists.new')}
                 </span>
-              </Link>
+              </button>
               {(lists ?? []).slice(0, 5).map((l) => (
                 <Link
                   key={l.id}
@@ -212,14 +208,14 @@ export function Profile() {
 
           {/* Shows */}
           <section>
-            <SectionHeader label={t('discover.in_library')} />
+            <SectionHeader label={t('discover.in_library')} to="/library" />
             <PosterRow shows={shows} />
           </section>
 
           {/* Movies */}
           {watchedMovies.length > 0 && (
             <section>
-              <SectionHeader label={t('profile.your_movies')} />
+              <SectionHeader label={t('profile.your_movies')} to="/library?tab=movies" />
               <MoviePosterRow movies={watchedMovies} />
             </section>
           )}
@@ -334,6 +330,8 @@ export function Profile() {
           )}
         </div>
       </div>
+
+      {creatingList && <NewListModal onClose={() => setCreatingList(false)} />}
     </div>
   );
 }
@@ -373,24 +371,45 @@ function MoviePosterRow({ movies }: { movies: import('../types').Movie[] }) {
   );
 }
 
-/** The days / hours / minutes total on one confident line. */
-function TimeLine({
+/**
+ * A single stats card (Series or Movies): time watched as the headline, then a
+ * couple of counter rows. Two of these sit side by side, TV Time style.
+ */
+function StatCard({
+  title,
   time,
   lang,
+  lines,
 }: {
+  title: string;
   time: { days: number; hours: number; minutes: number };
   lang: string;
+  lines: { label: string; value: string }[];
 }) {
   const { t } = useTranslation();
   return (
-    <p className="mt-1 font-display text-3xl font-semibold leading-none tabular-nums lg:text-4xl">
-      {formatNumber(time.days, lang)}
-      <span className="ms-1 me-3 text-base font-normal text-muted">{t('common.days')}</span>
-      {formatNumber(time.hours, lang)}
-      <span className="ms-1 me-3 text-base font-normal text-muted">{t('common.hours')}</span>
-      {formatNumber(time.minutes, lang)}
-      <span className="ms-1 text-base font-normal text-muted">{t('common.minutes')}</span>
-    </p>
+    <div className="card p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gold">
+        {title}
+      </p>
+      <p className="mt-3 font-display text-2xl font-semibold leading-none tabular-nums lg:text-3xl">
+        {formatNumber(time.days, lang)}
+        <span className="ms-0.5 me-2 text-sm font-normal text-muted">{t('common.days')}</span>
+        {formatNumber(time.hours, lang)}
+        <span className="ms-0.5 text-sm font-normal text-muted">{t('common.hours')}</span>
+      </p>
+      <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-faint">
+        {t('profile.time_watched')}
+      </p>
+      <div className="mt-4 space-y-2 border-t border-overlay/[0.06] pt-3">
+        {lines.map((l) => (
+          <div key={l.label} className="flex items-baseline justify-between gap-2">
+            <span className="truncate text-sm text-muted">{l.label}</span>
+            <span className="font-display text-lg font-semibold tabular-nums">{l.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -401,15 +420,6 @@ const tooltipStyle = {
   color: 'rgb(var(--fg))',
   fontSize: 12,
 } as const;
-
-function StatTile({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <p className="font-display text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-xs text-muted">{label}</p>
-    </div>
-  );
-}
 
 function Highlight({
   icon: Icon,

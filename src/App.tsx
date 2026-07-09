@@ -28,6 +28,9 @@ const Lists = lazy(() =>
 const Calendar = lazy(() =>
   import('./pages/Calendar').then((m) => ({ default: m.Calendar })),
 );
+const Library = lazy(() =>
+  import('./pages/Library').then((m) => ({ default: m.Library })),
+);
 const Wrapped = lazy(() =>
   import('./pages/Wrapped').then((m) => ({ default: m.Wrapped })),
 );
@@ -107,6 +110,14 @@ export default function App() {
           element={
             <Suspense fallback={<Spinner />}>
               <Calendar />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/library"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <Library />
             </Suspense>
           }
         />

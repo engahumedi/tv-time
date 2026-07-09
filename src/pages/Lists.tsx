@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Library } from 'lucide-react';
+import { Library, Plus } from 'lucide-react';
 import { useLists, useLibrary, useMovies } from '../lib/hooks';
-import { createList, deleteList } from '../lib/repo';
+import { deleteList } from '../lib/repo';
 import { Poster } from '../components/Poster';
 import { EmptyState } from '../components/EmptyState';
+import { NewListModal } from '../components/NewListModal';
 
 type Kind = 'show' | 'movie';
 
@@ -15,19 +16,12 @@ export function Lists() {
   const library = useLibrary();
   const movies = useMovies();
   const [kind, setKind] = useState<Kind>('show');
-  const [name, setName] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const showById = new Map((library ?? []).map((s) => [s.id, s]));
   const movieById = new Map((movies ?? []).map((m) => [m.id, m]));
 
   const filtered = (lists ?? []).filter((l) => (l.kind ?? 'show') === kind);
-
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    await createList(name, kind);
-    setName('');
-  }
 
   return (
     <div className="pt-2">
@@ -48,17 +42,14 @@ export function Lists() {
         ))}
       </div>
 
-      <form onSubmit={create} className="mb-6 flex max-w-md gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t('lists.name_placeholder')}
-          className="input flex-1"
-        />
-        <button type="submit" className="btn-gold shrink-0">
-          {t('lists.new')}
-        </button>
-      </form>
+      <button onClick={() => setCreating(true)} className="btn-gold mb-6">
+        <Plus size={17} strokeWidth={2.25} />
+        {t('lists.new')}
+      </button>
+
+      {creating && (
+        <NewListModal defaultKind={kind} onClose={() => setCreating(false)} />
+      )}
 
       {lists && filtered.length === 0 && (
         <EmptyState icon={<Library size={22} strokeWidth={1.5} />} title={t('lists.empty_title')} body={t('lists.empty_body')} />
