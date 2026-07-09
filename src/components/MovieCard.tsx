@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { Poster } from './Poster';
 import { TmdbRating } from './Rating';
@@ -38,12 +39,10 @@ export function MovieCard({ movie }: { movie: Movie }) {
   return (
     <div className="group block w-full animate-fade-up">
       <div className="relative aspect-[2/3] overflow-hidden rounded-lg ring-1 ring-overlay/[0.08] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-overlay/25">
-        <Poster
-          path={movie.posterPath}
-          alt={movie.title}
-          className="h-full w-full"
-        />
-        <TmdbRating value={movie.voteAverage} className="absolute end-1.5 top-1.5" />
+        <Link to={`/movie/${movie.id}`} className="block h-full w-full">
+          <Poster path={movie.posterPath} alt={movie.title} className="h-full w-full" />
+        </Link>
+        <TmdbRating value={movie.voteAverage} className="pointer-events-none absolute end-1.5 top-1.5" />
         <button
           onClick={toggle}
           aria-label="Watched"
@@ -56,7 +55,9 @@ export function MovieCard({ movie }: { movie: Movie }) {
           <Check size={17} strokeWidth={2.25} />
         </button>
       </div>
-      <p className="mt-2 truncate text-sm font-semibold text-fg">{movie.title}</p>
+      <Link to={`/movie/${movie.id}`} className="mt-2 block truncate text-sm font-semibold text-fg hover:underline">
+        {movie.title}
+      </Link>
       {movie.releaseDate && (
         <p className="truncate text-xs text-faint">{movie.releaseDate.slice(0, 4)}</p>
       )}

@@ -13,6 +13,9 @@ import { useAuth } from './lib/auth';
 const ShowDetail = lazy(() =>
   import('./pages/ShowDetail').then((m) => ({ default: m.ShowDetail })),
 );
+const MovieDetail = lazy(() =>
+  import('./pages/MovieDetail').then((m) => ({ default: m.MovieDetail })),
+);
 const Profile = lazy(() =>
   import('./pages/Profile').then((m) => ({ default: m.Profile })),
 );
@@ -61,6 +64,14 @@ export default function App() {
           element={
             <Suspense fallback={<Spinner />}>
               <ShowDetail />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/movie/:id"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <MovieDetail />
             </Suspense>
           }
         />

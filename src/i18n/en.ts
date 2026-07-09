@@ -123,6 +123,11 @@ export const en = {
     note_placeholder: 'Write a note about this episode…',
     note_saved: 'Saved',
   },
+  movie: {
+    mark_watched: 'Mark watched',
+    watched: 'Watched',
+    remove_confirm: 'Remove this movie from your library?',
+  },
   lists: {
     title: 'My Lists',
     new: 'New list',

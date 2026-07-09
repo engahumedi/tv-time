@@ -125,6 +125,11 @@ export const ar: Translation = {
     note_placeholder: 'اكتب ملاحظة عن هذه الحلقة…',
     note_saved: 'حُفظت',
   },
+  movie: {
+    mark_watched: 'تحديد كمُشاهَد',
+    watched: 'مُشاهَد',
+    remove_confirm: 'إزالة هذا الفيلم من مكتبتك؟',
+  },
   lists: {
     title: 'قوائمي',
     new: 'قائمة جديدة',

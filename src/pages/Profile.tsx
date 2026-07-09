@@ -73,6 +73,7 @@ export function Profile() {
   const movieMinutes = watchedMovies.reduce((a, m) => a + (m.runtime || 0), 0);
   const movieTime = breakdownTime(movieMinutes);
   const favorites = shows.filter((s) => s.favorite);
+  const favoriteMovies = (movies ?? []).filter((m) => m.favorite);
   const heroShow = favorites[0] ?? shows[0];
   const heroBackdrop = img(heroShow?.backdropPath, 'w780');
   const name =
@@ -166,11 +167,16 @@ export function Profile() {
             </div>
           </section>
 
-          {/* Favorite shows */}
-          {favorites.length > 0 && (
+          {/* Favorites (shows + movies) */}
+          {(favorites.length > 0 || favoriteMovies.length > 0) && (
             <section>
               <SectionHeader label={t('show.favorite')} heart />
-              <PosterRow shows={favorites} />
+              {favorites.length > 0 && <PosterRow shows={favorites} />}
+              {favoriteMovies.length > 0 && (
+                <div className={favorites.length > 0 ? 'mt-3' : ''}>
+                  <MoviePosterRow movies={favoriteMovies} />
+                </div>
+              )}
             </section>
           )}
 
