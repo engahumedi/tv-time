@@ -145,7 +145,10 @@ export async function setEpisodeNote(
 
 // ---- custom lists ----
 
-export async function createList(name: string): Promise<ShowList> {
+export async function createList(
+  name: string,
+  kind: 'show' | 'movie' = 'show',
+): Promise<ShowList> {
   const list: ShowList = {
     id:
       typeof crypto !== 'undefined' && crypto.randomUUID
@@ -154,6 +157,7 @@ export async function createList(name: string): Promise<ShowList> {
     name: name.trim() || 'List',
     showIds: [],
     createdAt: Date.now(),
+    kind,
   };
   await db.lists.put(list);
   void cloudUpsertList(list);

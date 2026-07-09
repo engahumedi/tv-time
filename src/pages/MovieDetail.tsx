@@ -17,6 +17,7 @@ import { formatDate } from '../lib/format';
 import { Poster } from '../components/Poster';
 import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
+import { ListPickerModal } from '../components/ListPickerModal';
 import type { Movie } from '../types';
 
 export function MovieDetail() {
@@ -29,6 +30,7 @@ export function MovieDetail() {
   const [preview, setPreview] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
   const [imdb, setImdb] = useState<ImdbRating | null>(null);
+  const [showLists, setShowLists] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,6 +177,13 @@ export function MovieDetail() {
               >
                 <Trash2 size={18} strokeWidth={1.8} />
               </button>
+              <button
+                onClick={() => setShowLists(true)}
+                className="btn-ghost text-sm"
+              >
+                <Plus size={16} strokeWidth={2} />
+                {t('show.add_to_list')}
+              </button>
             </>
           )}
         </div>
@@ -206,6 +215,10 @@ export function MovieDetail() {
           </section>
         )}
       </div>
+
+      {showLists && (
+        <ListPickerModal itemId={movieId} kind="movie" onClose={() => setShowLists(false)} />
+      )}
     </div>
   );
 }

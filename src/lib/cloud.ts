@@ -89,6 +89,7 @@ function listToRow(l: ShowList) {
     name: l.name,
     show_ids: l.showIds,
     created_at: l.createdAt,
+    kind: l.kind ?? 'show',
   };
 }
 
@@ -97,6 +98,7 @@ interface ListRow {
   name: string;
   show_ids: number[];
   created_at: number;
+  kind?: 'show' | 'movie';
 }
 
 function rowToList(r: ListRow): ShowList {
@@ -105,6 +107,7 @@ function rowToList(r: ListRow): ShowList {
     name: r.name,
     showIds: r.show_ids ?? [],
     createdAt: r.created_at,
+    kind: r.kind ?? 'show',
   };
 }
 

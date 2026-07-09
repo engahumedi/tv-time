@@ -415,7 +415,7 @@ export function ShowDetail() {
         />
       )}
       {showLists && (
-        <ListPickerModal showId={showId} onClose={() => setShowLists(false)} />
+        <ListPickerModal itemId={showId} kind="show" onClose={() => setShowLists(false)} />
       )}
     </div>
   );

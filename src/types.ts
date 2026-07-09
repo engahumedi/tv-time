@@ -99,12 +99,18 @@ export interface WatchRecord {
   source: 'manual' | 'import';
 }
 
-/** A user-created collection of shows (e.g. "Anime", "Comfort watches"). */
+/**
+ * A user-created collection (e.g. "Anime", "Comfort watches"). A list holds
+ * either shows or movies — never both — determined by `kind`. `showIds` stores
+ * the item ids regardless of kind (they are TMDB ids). Older lists without a
+ * `kind` are treated as show lists.
+ */
 export interface ShowList {
   id: string;
   name: string;
   showIds: number[];
   createdAt: number;
+  kind?: 'show' | 'movie';
 }
 
 export type Language = 'en' | 'ar';

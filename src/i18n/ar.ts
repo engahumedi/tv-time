@@ -138,6 +138,7 @@ export const ar: Translation = {
     empty_title: 'لا قوائم بعد',
     empty_body: 'اجمع مسلسلاتك في قوائم مثل «أنمي» أو «مفضّلة».',
     count: '{{n}} مسلسل',
+    count_movies: '{{n}} فيلم',
     delete_confirm: 'حذف هذه القائمة؟',
     add_here: 'أضِف إلى «{{name}}»',
     manage: 'أضِف إلى قوائم',

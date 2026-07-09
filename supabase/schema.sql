@@ -32,8 +32,11 @@ create table if not exists public.lists (
   name       text   not null,
   show_ids   jsonb  not null default '[]'::jsonb,
   created_at bigint not null default 0,
+  kind       text   not null default 'show',
   primary key (user_id, id)
 );
+-- Older deployments: add the list kind column if it's missing.
+alter table public.lists add column if not exists kind text not null default 'show';
 
 create table if not exists public.movies (
   user_id    uuid    not null references auth.users (id) on delete cascade,

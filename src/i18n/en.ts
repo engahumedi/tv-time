@@ -136,6 +136,7 @@ export const en = {
     empty_title: 'No lists yet',
     empty_body: 'Group your shows into lists like “Anime” or “Comfort watches”.',
     count: '{{n}} shows',
+    count_movies: '{{n}} movies',
     delete_confirm: 'Delete this list?',
     add_here: 'Add to “{{name}}”',
     manage: 'Add to lists',

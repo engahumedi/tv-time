@@ -3,23 +3,26 @@ import { useTranslation } from 'react-i18next';
 import { useLists } from '../lib/hooks';
 import { createList, toggleShowInList } from '../lib/repo';
 
-/** Pick which lists a show belongs to (with a quick "create list" field). */
+/** Pick which lists an item belongs to (with a quick "create list" field). */
 export function ListPickerModal({
-  showId,
+  itemId,
+  kind = 'show',
   onClose,
 }: {
-  showId: number;
+  itemId: number;
+  kind?: 'show' | 'movie';
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const lists = useLists();
+  const allLists = useLists();
+  const lists = (allLists ?? []).filter((l) => (l.kind ?? 'show') === kind);
   const [name, setName] = useState('');
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    const list = await createList(name);
-    await toggleShowInList(list.id, showId);
+    const list = await createList(name, kind);
+    await toggleShowInList(list.id, itemId);
     setName('');
   }
 
@@ -35,12 +38,12 @@ export function ListPickerModal({
         <h2 className="mb-4 text-lg font-bold">{t('lists.manage')}</h2>
 
         <div className="max-h-64 space-y-1.5 overflow-y-auto">
-          {(lists ?? []).map((l) => {
-            const inList = l.showIds.includes(showId);
+          {lists.map((l) => {
+            const inList = l.showIds.includes(itemId);
             return (
               <button
                 key={l.id}
-                onClick={() => toggleShowInList(l.id, showId)}
+                onClick={() => toggleShowInList(l.id, itemId)}
                 className="flex w-full items-center justify-between rounded-xl bg-overlay/[0.04] px-3 py-2.5 text-start hover:bg-overlay/[0.08]"
               >
                 <span className="min-w-0 flex-1 truncate font-medium">{l.name}</span>

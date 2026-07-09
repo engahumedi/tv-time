@@ -161,7 +161,7 @@ export function Profile() {
                   className="flex aspect-video flex-col justify-end rounded-lg border border-overlay/[0.08] bg-navy-800 p-3 hover:bg-navy-700"
                 >
                   <p className="truncate font-semibold">{l.name}</p>
-                  <p className="text-xs text-muted">{t('lists.count', { n: l.showIds.length })}</p>
+                  <p className="text-xs text-muted">{t(l.kind === 'movie' ? 'lists.count_movies' : 'lists.count', { n: l.showIds.length })}</p>
                 </Link>
               ))}
             </div>
