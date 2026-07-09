@@ -44,7 +44,7 @@ function Spinner() {
 }
 
 export default function App() {
-  const { enabled, ready, user, guest, recovery } = useAuth();
+  const { enabled, ready, user, recovery } = useAuth();
 
   // Completing a password-reset link takes priority over everything else.
   if (recovery) return <ResetPassword />;
@@ -53,9 +53,9 @@ export default function App() {
   // at an already-signed-in user.
   if (enabled && !ready) return <Spinner />;
 
-  // Auth-first: show the welcome/login screen until the user signs in or
-  // explicitly chooses to explore as a guest.
-  if (enabled && !user && !guest) return <Welcome />;
+  // Auth-first: an account is required — show the welcome/login screen until
+  // the user signs in.
+  if (enabled && !user) return <Welcome />;
 
   return (
     <Routes>

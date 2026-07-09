@@ -9,8 +9,6 @@ import type { User } from '@supabase/supabase-js';
 import { supabase, hasSupabase } from './supabase';
 import { setCloudUser, syncAfterLogin } from './cloud';
 
-const GUEST_KEY = 'showtrack:guest';
-
 interface AuthState {
   /** True when Supabase is configured (login is available). */
   enabled: boolean;
@@ -19,15 +17,12 @@ interface AuthState {
   user: User | null;
   /** True while a full sync is running after sign-in. */
   syncing: boolean;
-  /** The user chose to explore without an account. */
-  guest: boolean;
   /** True while completing a password-reset (recovery) link. */
   recovery: boolean;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  continueAsGuest: () => void;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
 }
@@ -44,9 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!hasSupabase);
   const [syncing, setSyncing] = useState(false);
   const [recovery, setRecovery] = useState(false);
-  const [guest, setGuest] = useState<boolean>(
-    () => localStorage.getItem(GUEST_KEY) === '1',
-  );
 
   useEffect(() => {
     if (!supabase) return;
@@ -86,14 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) throw new Error('auth-unavailable');
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-    clearGuest();
   }
 
   async function signIn(email: string, password: string) {
     if (!supabase) throw new Error('auth-unavailable');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    clearGuest();
   }
 
   async function signInWithGoogle() {
@@ -112,16 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setCloudUser(null);
     setUser(null);
-  }
-
-  function continueAsGuest() {
-    localStorage.setItem(GUEST_KEY, '1');
-    setGuest(true);
-  }
-
-  function clearGuest() {
-    localStorage.removeItem(GUEST_KEY);
-    setGuest(false);
   }
 
   async function sendPasswordReset(email: string) {
@@ -146,13 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ready,
         user,
         syncing,
-        guest,
         recovery,
         signUp,
         signIn,
         signInWithGoogle,
         signOut,
-        continueAsGuest,
         sendPasswordReset,
         updatePassword,
       }}

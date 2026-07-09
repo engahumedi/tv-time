@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { Check, BarChart3, Cloud } from 'lucide-react';
-import { useAuth } from '../lib/auth';
 import { AuthForm } from './AuthForm';
 import { LanguageToggle } from './LanguageToggle';
 import { Logo } from './Sidebar';
@@ -8,7 +7,6 @@ import { Logo } from './Sidebar';
 /** First-run onboarding: brand + auth, shown before the user is signed in. */
 export function Welcome() {
   const { t } = useTranslation();
-  const { continueAsGuest } = useAuth();
 
   const features = [
     { Icon: Check, text: t('auth.feature_track') },
@@ -62,12 +60,6 @@ export function Welcome() {
           <div className="rounded-xl border border-overlay/[0.08] bg-navy-800 p-6">
             <AuthForm initialMode="up" />
           </div>
-          <button
-            onClick={continueAsGuest}
-            className="mt-4 w-full text-start text-sm text-faint hover:text-fg"
-          >
-            {t('auth.explore_guest')}
-          </button>
         </div>
       </div>
     </div>
