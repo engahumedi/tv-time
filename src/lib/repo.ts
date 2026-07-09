@@ -14,6 +14,7 @@ import type {
   WatchRecord,
   ShowStatus,
   ShowList,
+  Movie,
 } from '../types';
 
 /**
@@ -340,11 +341,63 @@ export async function bulkImportWatches(
 
 export { episodeId };
 
+// ---- movies (tracked separately from TV shows) ----
+
+/** Add a movie to the library (or update its metadata). Preserves watched state. */
+export async function addMovie(movie: Movie): Promise<void> {
+  const existing = await db.movies.get(movie.id);
+  const merged: Movie = {
+    ...movie,
+    watched: existing?.watched ?? movie.watched,
+    watchedAt: existing?.watchedAt ?? movie.watchedAt,
+    favorite: existing?.favorite ?? movie.favorite,
+    userRating: existing?.userRating ?? movie.userRating,
+    addedAt: existing?.addedAt ?? movie.addedAt,
+  };
+  await db.movies.put(merged);
+}
+
+/** Mark a movie watched / unwatched (adds it to the library if needed). */
+export async function setMovieWatched(
+  movie: Movie,
+  watched: boolean,
+): Promise<void> {
+  const existing = await db.movies.get(movie.id);
+  const base = existing ?? movie;
+  await db.movies.put({
+    ...base,
+    watched,
+    watchedAt: watched ? base.watchedAt ?? Date.now() : undefined,
+  });
+}
+
+export async function toggleMovieFavorite(id: number): Promise<void> {
+  const m = await db.movies.get(id);
+  if (!m) return;
+  await db.movies.update(id, { favorite: !m.favorite || undefined });
+}
+
+export async function rateMovie(id: number, rating: number): Promise<void> {
+  await db.movies.update(id, { userRating: rating || undefined });
+}
+
+export async function removeMovie(id: number): Promise<void> {
+  await db.movies.delete(id);
+}
+
 /** Wipe everything — used by the "reset data" action. */
 export async function clearAll(): Promise<void> {
-  await db.transaction('rw', db.shows, db.episodes, db.watches, async () => {
-    await db.shows.clear();
-    await db.episodes.clear();
-    await db.watches.clear();
-  });
+  await db.transaction(
+    'rw',
+    db.shows,
+    db.episodes,
+    db.watches,
+    db.movies,
+    async () => {
+      await db.shows.clear();
+      await db.episodes.clear();
+      await db.watches.clear();
+      await db.movies.clear();
+    },
+  );
 }

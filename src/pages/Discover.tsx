@@ -8,22 +8,29 @@ import {
   getTopRated,
   discoverByGenre,
   getGenreList,
+  searchMovies,
+  getTrendingMovies,
+  getTopRatedMovies,
   hasTmdbKey,
   type Person,
 } from '../lib/tmdb';
 import { ShowCard } from '../components/ShowCard';
+import { MovieCard } from '../components/MovieCard';
 import { PersonCard } from '../components/PersonCard';
 import { PersonModal } from '../components/PersonModal';
 import { EmptyState } from '../components/EmptyState';
-import type { Show } from '../types';
+import type { Show, Movie } from '../types';
 
+type Kind = 'show' | 'movie';
 type Tab = 'search' | 'trending' | 'top' | 'genres';
 
 export function Discover() {
   const { t } = useTranslation();
+  const [kind, setKind] = useState<Kind>('show');
   const [tab, setTab] = useState<Tab>('trending');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Show[] | null>(null);
+  const [movies, setMovies] = useState<Movie[] | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -42,36 +49,54 @@ export function Discover() {
     if (hasTmdbKey) getGenreList().then(setGenres).catch(() => {});
   }, []);
 
+  // Movies have no genres tab — fall back to trending when switching over.
+  function switchKind(k: Kind) {
+    setKind(k);
+    setResults(null);
+    setMovies(null);
+    setPeople([]);
+    if (k === 'movie' && tab === 'genres') setTab('trending');
+  }
+
   // Search (debounced).
   useEffect(() => {
     if (tab !== 'search') return;
     clearTimeout(debounce.current);
     const q = query.trim();
     if (!q) {
-      setResults(hasTmdbKey ? null : []);
       setPeople([]);
-      if (!hasTmdbKey) searchShows('').then(setResults);
+      if (kind === 'movie') {
+        setMovies(hasTmdbKey ? null : []);
+      } else {
+        setResults(hasTmdbKey ? null : []);
+        if (!hasTmdbKey) searchShows('').then(setResults);
+      }
       return;
     }
     setLoading(true);
     setError(false);
     debounce.current = setTimeout(async () => {
       try {
-        const [shows, ppl] = await Promise.all([
-          searchShows(q),
-          hasTmdbKey ? searchPeople(q) : Promise.resolve([]),
-        ]);
-        setResults(shows);
-        setPeople(ppl.filter((p) => p.profilePath).slice(0, 8));
+        if (kind === 'movie') {
+          setMovies(await searchMovies(q));
+        } else {
+          const [shows, ppl] = await Promise.all([
+            searchShows(q),
+            hasTmdbKey ? searchPeople(q) : Promise.resolve([]),
+          ]);
+          setResults(shows);
+          setPeople(ppl.filter((p) => p.profilePath).slice(0, 8));
+        }
       } catch {
         setError(true);
-        setResults([]);
+        if (kind === 'movie') setMovies([]);
+        else setResults([]);
       } finally {
         setLoading(false);
       }
     }, 350);
     return () => clearTimeout(debounce.current);
-  }, [query, tab]);
+  }, [query, tab, kind]);
 
   // Browse tabs.
   useEffect(() => {
@@ -79,32 +104,59 @@ export function Discover() {
     setLoading(true);
     setError(false);
     setResults(null);
+    setMovies(null);
     const load =
-      tab === 'trending'
-        ? getTrending()
-        : tab === 'top'
-          ? getTopRated()
-          : genreId
-            ? discoverByGenre(genreId)
-            : Promise.resolve([]);
-    load
-      .then(setResults)
+      kind === 'movie'
+        ? tab === 'trending'
+          ? getTrendingMovies()
+          : tab === 'top'
+            ? getTopRatedMovies()
+            : Promise.resolve([] as Movie[])
+        : tab === 'trending'
+          ? getTrending()
+          : tab === 'top'
+            ? getTopRated()
+            : genreId
+              ? discoverByGenre(genreId)
+              : Promise.resolve([] as Show[]);
+    (load as Promise<Show[] | Movie[]>)
+      .then((r) => (kind === 'movie' ? setMovies(r as Movie[]) : setResults(r as Show[])))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [tab, genreId]);
+  }, [tab, genreId, kind]);
 
-  const tabs: { key: Tab; label: string }[] = [
+  const allTabs: { key: Tab; label: string }[] = [
     { key: 'trending', label: t('discover.tab_trending') },
     { key: 'top', label: t('discover.tab_top') },
     { key: 'genres', label: t('discover.tab_genres') },
     { key: 'search', label: t('discover.tab_search') },
   ];
+  const tabs = kind === 'movie' ? allTabs.filter((tb) => tb.key !== 'genres') : allTabs;
+
+  const hasResults = kind === 'movie' ? movies : results;
 
   return (
     <div className="pt-2">
       <h1 className="mb-4 text-3xl font-bold lg:text-4xl">
         {t('discover.title')}
       </h1>
+
+      {/* Shows / Movies mode switch */}
+      <div className="mb-5 flex gap-6 border-b border-overlay/[0.08]">
+        {(['show', 'movie'] as const).map((k) => (
+          <button
+            key={k}
+            onClick={() => switchKind(k)}
+            className={`-mb-px border-b-2 pb-2.5 text-sm font-semibold transition-colors ${
+              kind === k
+                ? 'border-gold text-fg'
+                : 'border-transparent text-muted hover:text-fg'
+            }`}
+          >
+            {k === 'show' ? t('discover.kind_shows') : t('discover.kind_movies')}
+          </button>
+        ))}
+      </div>
 
       {hasTmdbKey && (
         <div className="no-scrollbar -mx-4 mb-5 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:px-0">
@@ -132,14 +184,14 @@ export function Discover() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('discover.placeholder')}
+            placeholder={kind === 'movie' ? t('discover.placeholder_movie') : t('discover.placeholder')}
             className="w-full rounded-2xl border border-overlay/[0.08] bg-navy-800 py-3 ps-11 pe-4 text-base outline-none transition-colors placeholder:text-faint focus:border-gold/60"
             autoFocus
           />
         </div>
       )}
 
-      {tab === 'genres' && (
+      {kind === 'show' && tab === 'genres' && (
         <div className="no-scrollbar -mx-4 mb-4 flex flex-wrap gap-2 px-4 lg:mx-0 lg:px-0">
           {genres.map((g) => (
             <button
@@ -169,8 +221,8 @@ export function Discover() {
         <EmptyState icon={<WifiOff size={22} strokeWidth={1.5} />} title={t('errors.search_failed')} body="" />
       )}
 
-      {/* People results (search only) */}
-      {!loading && tab === 'search' && people.length > 0 && (
+      {/* People results (shows search only) */}
+      {!loading && kind === 'show' && tab === 'search' && people.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
             {t('discover.people')}
@@ -183,7 +235,7 @@ export function Discover() {
         </section>
       )}
 
-      {!loading && !error && results && results.length === 0 && (
+      {!loading && !error && hasResults && hasResults.length === 0 && (
         <EmptyState
           icon={tab === 'search' && query ? <SearchX size={22} strokeWidth={1.5} /> : <Film size={22} strokeWidth={1.5} />}
           title={
@@ -195,10 +247,18 @@ export function Discover() {
         />
       )}
 
-      {!loading && results && results.length > 0 && (
+      {!loading && kind === 'show' && results && results.length > 0 && (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
           {results.map((s) => (
             <ShowCard key={s.id} show={s} subtitle={s.firstAirDate?.slice(0, 4)} />
+          ))}
+        </div>
+      )}
+
+      {!loading && kind === 'movie' && movies && movies.length > 0 && (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+          {movies.map((m) => (
+            <MovieCard key={m.id} movie={m} />
           ))}
         </div>
       )}

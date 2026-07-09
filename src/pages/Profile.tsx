@@ -25,13 +25,14 @@ import {
   Trophy,
   type LucideProps,
 } from 'lucide-react';
-import { useLibrary, useAllWatches, useLists } from '../lib/hooks';
+import { useLibrary, useAllWatches, useLists, useMovies } from '../lib/hooks';
 import { computeStats, computeBadges, breakdownTime } from '../lib/stats';
 import { formatNumber } from '../lib/format';
 import { img } from '../lib/tmdb';
 import { getDisplayName } from '../lib/settings';
 import { useAuth } from '../lib/auth';
 import { ShowCard } from '../components/ShowCard';
+import { MovieCard } from '../components/MovieCard';
 
 const GOLD = '#c9a24b';
 const GOLD_DIM = 'rgba(201,162,75,0.32)';
@@ -54,6 +55,7 @@ export function Profile() {
   const shows = useLibrary();
   const watches = useAllWatches();
   const lists = useLists();
+  const movies = useMovies();
   const { user } = useAuth();
 
   const stats = useMemo(
@@ -67,6 +69,9 @@ export function Profile() {
   }
 
   const time = breakdownTime(stats.totalMinutes);
+  const watchedMovies = (movies ?? []).filter((m) => m.watched);
+  const movieMinutes = watchedMovies.reduce((a, m) => a + (m.runtime || 0), 0);
+  const movieTime = breakdownTime(movieMinutes);
   const favorites = shows.filter((s) => s.favorite);
   const heroShow = favorites[0] ?? shows[0];
   const heroBackdrop = img(heroShow?.backdropPath, 'w780');
@@ -103,24 +108,35 @@ export function Profile() {
         </div>
 
         <div className="space-y-10 pb-4">
-          {/* Stats */}
+          {/* Stats — series and movies kept separate */}
           <section>
             <SectionHeader label={t('profile.stats')} />
-            {/* Time watched — one confident line */}
-            <p className="text-[11px] uppercase tracking-[0.15em] text-muted">
+
+            {/* Series */}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gold">
+              {t('profile.series')}
+            </p>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.15em] text-muted">
               {t('profile.time_watched')}
             </p>
-            <p className="mt-1 font-display text-3xl font-semibold leading-none tabular-nums lg:text-4xl">
-              {formatNumber(time.days, lang)}
-              <span className="ms-1 me-3 text-base font-normal text-muted">{t('common.days')}</span>
-              {formatNumber(time.hours, lang)}
-              <span className="ms-1 me-3 text-base font-normal text-muted">{t('common.hours')}</span>
-              {formatNumber(time.minutes, lang)}
-              <span className="ms-1 text-base font-normal text-muted">{t('common.minutes')}</span>
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-8 border-t border-overlay/[0.08] pt-5 sm:max-w-md">
+            <TimeLine time={time} lang={lang} />
+            <div className="mt-5 grid grid-cols-2 gap-8 sm:max-w-md">
               <StatTile value={formatNumber(stats.totalEpisodes, lang)} label={t('profile.episodes_watched')} />
               <StatTile value={formatNumber(stats.totalShows, lang)} label={t('profile.shows_watched')} />
+            </div>
+
+            {/* Movies */}
+            <div className="mt-8 border-t border-overlay/[0.08] pt-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gold">
+                {t('profile.movies')}
+              </p>
+              <p className="mt-2 text-[11px] uppercase tracking-[0.15em] text-muted">
+                {t('profile.time_watched')}
+              </p>
+              <TimeLine time={movieTime} lang={lang} />
+              <div className="mt-5 grid grid-cols-2 gap-8 sm:max-w-md">
+                <StatTile value={formatNumber(watchedMovies.length, lang)} label={t('profile.movies_watched')} />
+              </div>
             </div>
           </section>
 
@@ -163,6 +179,14 @@ export function Profile() {
             <SectionHeader label={t('discover.in_library')} />
             <PosterRow shows={shows} />
           </section>
+
+          {/* Movies */}
+          {watchedMovies.length > 0 && (
+            <section>
+              <SectionHeader label={t('profile.your_movies')} />
+              <MoviePosterRow movies={watchedMovies} />
+            </section>
+          )}
 
           {/* Detailed stats */}
           {stats.totalEpisodes > 0 && (
@@ -270,6 +294,39 @@ function PosterRow({ shows }: { shows: import('../types').Show[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function MoviePosterRow({ movies }: { movies: import('../types').Movie[] }) {
+  return (
+    <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+      {movies.map((m) => (
+        <div key={m.id} className="w-28 shrink-0">
+          <MovieCard movie={m} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The days / hours / minutes total on one confident line. */
+function TimeLine({
+  time,
+  lang,
+}: {
+  time: { days: number; hours: number; minutes: number };
+  lang: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <p className="mt-1 font-display text-3xl font-semibold leading-none tabular-nums lg:text-4xl">
+      {formatNumber(time.days, lang)}
+      <span className="ms-1 me-3 text-base font-normal text-muted">{t('common.days')}</span>
+      {formatNumber(time.hours, lang)}
+      <span className="ms-1 me-3 text-base font-normal text-muted">{t('common.hours')}</span>
+      {formatNumber(time.minutes, lang)}
+      <span className="ms-1 text-base font-normal text-muted">{t('common.minutes')}</span>
+    </p>
   );
 }
 

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Show, Episode, WatchRecord, ShowList } from '../types';
+import type { Show, Episode, WatchRecord, ShowList, Movie } from '../types';
 
 /**
  * Local-first storage. Everything the user tracks lives in IndexedDB, so the
@@ -11,6 +11,7 @@ export class ShowTrackDB extends Dexie {
   episodes!: Table<Episode, string>;
   watches!: Table<WatchRecord, string>;
   lists!: Table<ShowList, string>;
+  movies!: Table<Movie, number>;
 
   constructor() {
     super('showtrack');
@@ -24,6 +25,10 @@ export class ShowTrackDB extends Dexie {
     // v2 adds user-created lists.
     this.version(2).stores({
       lists: 'id, createdAt',
+    });
+    // v3 adds movie tracking (separate from TV shows/episodes).
+    this.version(3).stores({
+      movies: 'id, addedAt, watchedAt',
     });
   }
 }

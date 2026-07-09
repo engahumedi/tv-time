@@ -13,6 +13,7 @@ import {
 import { img } from '../lib/tmdb';
 import { ShowCard } from '../components/ShowCard';
 import { EmptyState } from '../components/EmptyState';
+import { TvTimeBanner } from '../components/TvTimeBanner';
 import { markWatched } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
@@ -31,21 +32,25 @@ export function Home() {
 
   if (library.length === 0) {
     return (
-      <EmptyState icon={<Tv size={22} strokeWidth={1.5} />} title={t('home.empty_title')} body={t('home.empty_body')}>
-        <div className="flex flex-col gap-3">
-          <button className="btn-gold" onClick={() => navigate('/discover')}>
-            {t('home.empty_cta')}
-          </button>
-          <Link to="/import" className="btn-ghost">
-            {t('home.import_cta')}
-          </Link>
-        </div>
-      </EmptyState>
+      <div className="pt-1">
+        <TvTimeBanner />
+        <EmptyState icon={<Tv size={22} strokeWidth={1.5} />} title={t('home.empty_title')} body={t('home.empty_body')}>
+          <div className="flex flex-col gap-3">
+            <button className="btn-gold" onClick={() => navigate('/discover')}>
+              {t('home.empty_cta')}
+            </button>
+            <Link to="/import" className="btn-ghost">
+              {t('home.import_cta')}
+            </Link>
+          </div>
+        </EmptyState>
+      </div>
     );
   }
 
   return (
     <div className="pt-1">
+      <TvTimeBanner />
       {/* Tabs — underlined, editorial */}
       <div className="mb-5 flex items-end justify-between border-b border-overlay/[0.08]">
         <div className="flex gap-6">

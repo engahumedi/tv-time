@@ -6,12 +6,21 @@ import { LanguageToggle } from '../components/LanguageToggle';
 import { AccountCard } from '../components/AccountCard';
 import { exportData, exportWatchesCsv, triggerDownload } from '../lib/exporter';
 import { clearAll } from '../lib/repo';
+import { useAuth } from '../lib/auth';
 
 export function Settings() {
   const { t } = useTranslation();
+  const { user, updatePassword } = useAuth();
   const [theme, setThemeState] = useState<Theme>(getTheme());
   const [name, setName] = useState(getDisplayName());
   const [savedName, setSavedName] = useState(false);
+
+  // Change-password form (only when signed in).
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwErr, setPwErr] = useState('');
 
   function chooseTheme(next: Theme) {
     setTheme(next);
@@ -22,6 +31,31 @@ export function Settings() {
     setDisplayName(name);
     setSavedName(true);
     setTimeout(() => setSavedName(false), 1500);
+  }
+
+  async function changePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwErr('');
+    setPwMsg('');
+    if (pw.length < 6) {
+      setPwErr(t('auth.err_weak'));
+      return;
+    }
+    if (pw !== pw2) {
+      setPwErr(t('auth.passwords_mismatch'));
+      return;
+    }
+    setPwBusy(true);
+    try {
+      await updatePassword(pw);
+      setPwMsg(t('settings.password_saved'));
+      setPw('');
+      setPw2('');
+    } catch {
+      setPwErr(t('auth.err_generic'));
+    } finally {
+      setPwBusy(false);
+    }
   }
 
   return (
@@ -77,6 +111,44 @@ export function Settings() {
         </div>
       </section>
 
+      {/* Change password (signed-in users only) */}
+      {user && (
+        <section className="card p-4">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
+            {t('settings.password')}
+          </h2>
+          <form onSubmit={changePassword} className="space-y-3">
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              placeholder={t('auth.new_password')}
+              className="input"
+              dir="ltr"
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={pw2}
+              onChange={(e) => setPw2(e.target.value)}
+              placeholder={t('auth.confirm_password')}
+              className="input"
+              dir="ltr"
+            />
+            {pwErr && (
+              <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{pwErr}</p>
+            )}
+            {pwMsg && (
+              <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">{pwMsg}</p>
+            )}
+            <button type="submit" className="btn-gold text-sm" disabled={pwBusy}>
+              {pwBusy ? t('auth.working') : t('settings.change_password')}
+            </button>
+          </form>
+        </section>
+      )}
+
       {/* Data */}
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
@@ -91,6 +163,16 @@ export function Settings() {
             {t('settings.import_cta')}
           </Link>
         </div>
+        <ol className="mt-3 space-y-2 border-t border-overlay/[0.06] pt-3 text-sm text-muted">
+          {(t('settings.import_steps', { returnObjects: true }) as string[]).map((step, i) => (
+            <li key={i} className="flex gap-2.5">
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gold/15 text-[11px] font-bold text-gold">
+                {i + 1}
+              </span>
+              <span className="leading-relaxed">{step}</span>
+            </li>
+          ))}
+        </ol>
         <div className="flex flex-wrap items-center gap-2 border-t border-overlay/[0.06] pt-3">
           <span className="me-auto font-semibold">{t('settings.export_title')}</span>
           <button

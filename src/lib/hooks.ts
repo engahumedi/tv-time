@@ -1,9 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
-import type { Show, Episode, WatchRecord, ShowList } from '../types';
+import type { Show, Episode, WatchRecord, ShowList, Movie } from '../types';
 
 export function useLists(): ShowList[] | undefined {
   return useLiveQuery(() => db.lists.orderBy('createdAt').toArray());
+}
+
+/** Every movie in the library, newest first. */
+export function useMovies(): Movie[] | undefined {
+  return useLiveQuery(() => db.movies.orderBy('addedAt').reverse().toArray());
+}
+
+/** The movie record for a single id (or null), reactive. */
+export function useMovie(id: number): Movie | null | undefined {
+  return useLiveQuery(async () => (await db.movies.get(id)) ?? null, [id]);
 }
 
 export interface WatchListItem {

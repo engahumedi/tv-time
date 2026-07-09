@@ -39,6 +39,32 @@ export interface Show {
   addedAt: number;
 }
 
+/** A movie in the user's library (sourced from TMDB). Tracked as a single watch. */
+export interface Movie {
+  /** TMDB movie id. Primary key. */
+  id: number;
+  title: string;
+  originalTitle?: string;
+  overview: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  releaseDate: string | null;
+  genres: string[];
+  /** Runtime in minutes (0 when unknown). */
+  runtime: number;
+  voteAverage?: number;
+  imdbId?: string;
+  /** The user's own rating, 1–10 (undefined when unrated). */
+  userRating?: number;
+  favorite?: boolean;
+  /** Whether the user has watched it. */
+  watched: boolean;
+  /** Epoch ms of when it was watched (undefined until watched). */
+  watchedAt?: number;
+  /** When the movie was added to the library. */
+  addedAt: number;
+}
+
 /** A single episode belonging to a show. */
 export interface Episode {
   /** `${showId}:${season}:${number}` — stable composite id. Primary key. */

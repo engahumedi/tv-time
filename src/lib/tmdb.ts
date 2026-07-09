@@ -1,4 +1,4 @@
-import type { Show, Episode } from '../types';
+import type { Show, Episode, Movie } from '../types';
 import { episodeId } from './ids';
 import { demoShows, demoEpisodes, searchDemoShows } from './demoData';
 import { functionsBase, supabaseAnonKey } from './supabase';
@@ -344,4 +344,114 @@ export async function getAllEpisodes(
 export async function findShowByName(name: string): Promise<Show | null> {
   const results = await searchShows(name);
   return results[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Movies
+// ---------------------------------------------------------------------------
+
+let movieGenreMap: Record<number, string> | null = null;
+async function loadMovieGenres(): Promise<Record<number, string>> {
+  if (movieGenreMap) return movieGenreMap;
+  try {
+    const data = await tmdb<{ genres: { id: number; name: string }[] }>(
+      '/genre/movie/list',
+      { language: tmdbLang() },
+    );
+    movieGenreMap = Object.fromEntries(data.genres.map((g) => [g.id, g.name]));
+  } catch {
+    movieGenreMap = {};
+  }
+  return movieGenreMap;
+}
+
+interface TmdbMovieResult {
+  id: number;
+  title: string;
+  original_title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string;
+  genre_ids: number[];
+  vote_average: number;
+}
+
+function movieResultToMovie(
+  r: TmdbMovieResult,
+  genres: Record<number, string>,
+): Movie {
+  return {
+    id: r.id,
+    title: r.title,
+    originalTitle: r.original_title,
+    overview: r.overview,
+    posterPath: r.poster_path,
+    backdropPath: r.backdrop_path,
+    releaseDate: r.release_date || null,
+    genres: (r.genre_ids || []).map((id) => genres[id]).filter(Boolean),
+    runtime: 0,
+    voteAverage: r.vote_average || undefined,
+    watched: false,
+    addedAt: Date.now(),
+  };
+}
+
+/** Search movies by title. Returns [] in demo mode (no movie demo data). */
+export async function searchMovies(query: string): Promise<Movie[]> {
+  if (!hasTmdbKey || !query.trim()) return [];
+  const [genres, data] = await Promise.all([
+    loadMovieGenres(),
+    tmdb<{ results: TmdbMovieResult[] }>('/search/movie', {
+      query,
+      include_adult: 'false',
+      language: tmdbLang(),
+    }),
+  ]);
+  return data.results.map((r) => movieResultToMovie(r, genres));
+}
+
+async function fetchMovieList(
+  path: string,
+  params: Record<string, string> = {},
+): Promise<Movie[]> {
+  if (!hasTmdbKey) return [];
+  const [genres, data] = await Promise.all([
+    loadMovieGenres(),
+    tmdb<{ results: TmdbMovieResult[] }>(path, { language: tmdbLang(), ...params }),
+  ]);
+  return data.results
+    .filter((r) => r.poster_path)
+    .map((r) => movieResultToMovie(r, genres));
+}
+
+export const getTrendingMovies = (): Promise<Movie[]> =>
+  fetchMovieList('/trending/movie/week');
+export const getTopRatedMovies = (): Promise<Movie[]> =>
+  fetchMovieList('/movie/top_rated', { 'vote_count.gte': '500' });
+
+interface TmdbMovieDetail extends TmdbMovieResult {
+  genres: { id: number; name: string }[];
+  runtime: number | null;
+  imdb_id: string | null;
+}
+
+/** Full movie detail — used when adding, to capture runtime and IMDb id. */
+export async function getMovieDetail(id: number): Promise<Movie> {
+  const d = await tmdb<TmdbMovieDetail>(`/movie/${id}`, { language: tmdbLang() });
+  return {
+    id: d.id,
+    title: d.title,
+    originalTitle: d.original_title,
+    overview: d.overview,
+    posterPath: d.poster_path,
+    backdropPath: d.backdrop_path,
+    releaseDate: d.release_date || null,
+    genres: (d.genres || []).map((g) => g.name),
+    runtime: d.runtime ?? 0,
+    voteAverage: d.vote_average || undefined,
+    imdbId: d.imdb_id ?? undefined,
+    watched: false,
+    addedAt: Date.now(),
+  };
 }
