@@ -99,7 +99,9 @@ export function Profile() {
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent" />
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 lg:px-10">
+      {/* relative z-10 so this content paints above the positioned backdrop
+          (positioned siblings otherwise paint over later static content). */}
+      <div className="relative z-10 mx-auto max-w-4xl px-4 lg:px-10">
         {/* Avatar + name */}
         <div className="-mt-10 mb-8 flex items-end gap-4">
           <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border-4 border-navy-950 bg-navy-700 font-display text-3xl text-muted">
