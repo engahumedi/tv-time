@@ -190,9 +190,10 @@ export const en = {
   random: {
     title: 'Surprise me',
     open: 'Surprise me',
-    again: 'Try again',
+    again: 'Shuffle',
     go: 'Watch',
-    empty: 'Add shows to your watch list or bookmark some movies, then let us pick for you.',
+    any_genre: 'Any genre',
+    none: 'Couldn’t find a movie. Try another genre.',
   },
   calendar: {
     title: 'Calendar',

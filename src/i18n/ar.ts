@@ -192,9 +192,10 @@ export const ar: Translation = {
   random: {
     title: 'فاجئني',
     open: 'فاجئني',
-    again: 'مرة أخرى',
+    again: 'اخلط',
     go: 'شاهد',
-    empty: 'أضِف مسلسلات لقائمتك أو احفظ بعض الأفلام، ثم دعنا نختار لك.',
+    any_genre: 'أي تصنيف',
+    none: 'ما لقينا فيلم. جرّب تصنيفًا آخر.',
   },
   calendar: {
     title: 'الرزنامة',

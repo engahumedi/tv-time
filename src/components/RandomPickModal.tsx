@@ -1,79 +1,75 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Dices, Play, RefreshCw, X } from 'lucide-react';
-import { useWatchList, useWatchlistMovies } from '../lib/hooks';
+import { discoverMovies, getMovieGenreList, hasTmdbKey } from '../lib/tmdb';
 import { Poster } from './Poster';
-
-type Pick =
-  | { kind: 'show'; id: number; title: string; poster: string | null; subtitle: string }
-  | { kind: 'movie'; id: number; title: string; poster: string | null; subtitle: string };
+import { TmdbRating } from './Rating';
+import type { Movie } from '../types';
 
 /**
- * "Surprise me" — cuts through decision paralysis by picking a random thing to
- * watch from your show backlog + your movie watchlist.
+ * "Surprise me" — a movie roulette: pick a genre (or any), get a random movie
+ * to watch tonight. Re-rolling reuses the fetched pool, refetching a fresh
+ * random page when it runs out.
  */
 export function RandomPickModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const watchList = useWatchList();
-  const watchlistMovies = useWatchlistMovies();
+  const [genres, setGenres] = useState<{ id: number; name: string }[]>([]);
+  const [genreId, setGenreId] = useState<number | null>(null);
+  const [pool, setPool] = useState<Movie[]>([]);
+  const [pick, setPick] = useState<Movie | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
-  const pool = useMemo<Pick[]>(() => {
-    const shows: Pick[] = (watchList ?? []).map((i) => ({
-      kind: 'show',
-      id: i.show.id,
-      title: i.show.name,
-      poster: i.show.posterPath,
-      subtitle: `S${String(i.episode.seasonNumber).padStart(2, '0')} · E${String(
-        i.episode.episodeNumber,
-      ).padStart(2, '0')}`,
-    }));
-    const movies: Pick[] = (watchlistMovies ?? []).map((m) => ({
-      kind: 'movie',
-      id: m.id,
-      title: m.title,
-      poster: m.posterPath,
-      subtitle: m.releaseDate?.slice(0, 4) ?? '',
-    }));
-    return [...shows, ...movies];
-  }, [watchList, watchlistMovies]);
-
-  const [pick, setPick] = useState<Pick | null>(null);
-  const [spinning, setSpinning] = useState(false);
-
-  // Close on Escape for keyboard users.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Seed the first pick once the pool is ready.
-  const ready = watchList !== undefined && watchlistMovies !== undefined;
-  if (ready && pick === null && pool.length > 0) {
-    setPick(pool[Math.floor(Math.random() * pool.length)]);
-  }
+  useEffect(() => {
+    if (hasTmdbKey) getMovieGenreList().then(setGenres).catch(() => {});
+  }, []);
 
-  function roll() {
-    if (pool.length === 0) return;
-    setSpinning(true);
-    // A short shuffle for a touch of anticipation.
-    let ticks = 0;
-    const timer = setInterval(() => {
-      setPick(pool[Math.floor(Math.random() * pool.length)]);
-      if (++ticks >= 6) {
-        clearInterval(timer);
-        setSpinning(false);
+  // Fetch a fresh random pool whenever the genre changes (and on first open).
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError(false);
+      try {
+        const page = 1 + Math.floor(Math.random() * 5);
+        const results = await discoverMovies({ genreId, sort: 'popularity.desc', page });
+        if (cancelled) return;
+        setPool(results);
+        setPick(results.length ? results[Math.floor(Math.random() * results.length)] : null);
+        if (results.length === 0) setError(true);
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }, 70);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [genreId]);
+
+  function reroll() {
+    if (pool.length === 0) return;
+    // Prefer a different pick from the current pool.
+    const others = pool.filter((m) => m.id !== pick?.id);
+    const from = others.length > 0 ? others : pool;
+    setPick(from[Math.floor(Math.random() * from.length)]);
   }
 
   function go() {
     if (!pick) return;
     onClose();
-    navigate(pick.kind === 'show' ? `/show/${pick.id}` : `/movie/${pick.id}`);
+    navigate(`/movie/${pick.id}`);
   }
 
   return (
@@ -101,39 +97,63 @@ export function RandomPickModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {ready && pool.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">{t('random.empty')}</p>
-        ) : pick ? (
+        {/* Genre chips */}
+        {genres.length > 0 && (
+          <div className="no-scrollbar mb-4 -mx-6 flex gap-1.5 overflow-x-auto px-6">
+            <button
+              onClick={() => setGenreId(null)}
+              className={`chip shrink-0 ${genreId === null ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30' : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'}`}
+            >
+              {t('random.any_genre')}
+            </button>
+            {genres.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGenreId(g.id)}
+                className={`chip shrink-0 ${genreId === g.id ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30' : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'}`}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Pick */}
+        {loading ? (
+          <div className="mx-auto aspect-[2/3] w-40 rounded-xl shimmer" />
+        ) : error || !pick ? (
+          <p className="py-8 text-center text-sm text-muted">
+            {hasTmdbKey ? t('random.none') : t('discover.demo_notice')}
+          </p>
+        ) : (
           <>
             <button
               onClick={go}
-              className="mx-auto block w-40 overflow-hidden rounded-xl ring-1 ring-overlay/10 transition-transform hover:scale-[1.02]"
+              className="relative mx-auto block w-40 overflow-hidden rounded-xl ring-1 ring-overlay/10 transition-transform hover:scale-[1.02]"
             >
-              <div className={`aspect-[2/3] ${spinning ? 'opacity-70' : ''}`}>
-                <Poster path={pick.poster} alt={pick.title} className="h-full w-full" />
+              <div className="aspect-[2/3]">
+                <Poster path={pick.posterPath} alt={pick.title} className="h-full w-full" />
               </div>
+              <TmdbRating value={pick.voteAverage} className="pointer-events-none absolute end-1.5 top-1.5" />
             </button>
             <div className="mt-4 text-center">
-              <span className="chip bg-gold/12 text-gold">
-                {pick.kind === 'show' ? t('discover.kind_shows') : t('discover.kind_movies')}
-              </span>
-              <p className="mt-2 truncate font-display text-xl font-semibold">{pick.title}</p>
-              {pick.subtitle && <p className="text-sm text-muted">{pick.subtitle}</p>}
-            </div>
-            <div className="mt-5 flex gap-2">
-              <button onClick={roll} disabled={spinning || pool.length < 2} className="btn-ghost flex-1">
-                <RefreshCw size={16} strokeWidth={2} className={spinning ? 'animate-spin' : ''} />
-                {t('random.again')}
-              </button>
-              <button onClick={go} className="btn-gold flex-1">
-                <Play size={16} strokeWidth={2} fill="currentColor" />
-                {t('random.go')}
-              </button>
+              <p className="truncate font-display text-xl font-semibold">{pick.title}</p>
+              {pick.releaseDate && <p className="text-sm text-muted">{pick.releaseDate.slice(0, 4)}</p>}
             </div>
           </>
-        ) : (
-          <div className="py-10 text-center text-sm text-faint">{t('common.loading')}</div>
         )}
+
+        {/* Actions */}
+        <div className="mt-5 flex gap-2">
+          <button onClick={reroll} disabled={loading || pool.length < 2} className="btn-ghost flex-1">
+            <RefreshCw size={16} strokeWidth={2} className={loading ? 'animate-spin' : ''} />
+            {t('random.again')}
+          </button>
+          <button onClick={go} disabled={!pick} className="btn-gold flex-1">
+            <Play size={16} strokeWidth={2} fill="currentColor" />
+            {t('random.go')}
+          </button>
+        </div>
       </motion.div>
     </div>
   );

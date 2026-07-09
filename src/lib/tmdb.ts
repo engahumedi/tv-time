@@ -138,6 +138,8 @@ export interface DiscoverFilters {
   minRating?: number;
   /** 'popularity.desc' | 'vote_average.desc' | 'date.desc' */
   sort?: string;
+  /** TMDB result page (used to randomise the Surprise picker). */
+  page?: number;
 }
 
 function buildDiscoverParams(
@@ -154,6 +156,7 @@ function buildDiscoverParams(
   if (f.genreId) params.with_genres = String(f.genreId);
   if (f.year) params[yearKey] = f.year;
   if (f.minRating) params['vote_average.gte'] = String(f.minRating);
+  if (f.page) params.page = String(f.page);
   return params;
 }
 

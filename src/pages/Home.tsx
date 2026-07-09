@@ -11,7 +11,7 @@ import {
   type WatchListItem,
   type CalendarItem,
 } from '../lib/hooks';
-import { img } from '../lib/tmdb';
+import { img, hasTmdbKey } from '../lib/tmdb';
 import { LibraryGrid } from '../components/LibraryGrid';
 import { MovieCard } from '../components/MovieCard';
 import { EmptyState } from '../components/EmptyState';
@@ -39,7 +39,8 @@ export function Home() {
   if (watchList === undefined || library === undefined || watchlistMovies === undefined)
     return <Skeleton />;
 
-  const canPick = watchList.length > 0 || watchlistMovies.length > 0;
+  // The surprise picker is a movie roulette (TMDB) — available whenever we have data access.
+  const canPick = hasTmdbKey;
 
   if (library.length === 0 && watchlistMovies.length === 0) {
     return (

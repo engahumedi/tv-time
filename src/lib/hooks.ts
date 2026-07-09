@@ -111,29 +111,6 @@ export function useCalendar(): CalendarItem[] | undefined {
   });
 }
 
-/**
- * Every episode (past or future) from followed shows that has a valid air
- * date, paired with its show — powers the full month calendar so any month can
- * be browsed, not just the next couple of weeks.
- */
-export function useEpisodeCalendar(): CalendarItem[] | undefined {
-  return useLiveQuery(async () => {
-    const shows = await db.shows.toArray();
-    const showById = new Map(shows.map((s) => [s.id, s]));
-    const items: CalendarItem[] = [];
-    for (const show of shows) {
-      const eps = await db.episodes.where('showId').equals(show.id).toArray();
-      for (const e of eps) {
-        if (!e.airDate) continue;
-        const ts = new Date(e.airDate).getTime();
-        if (Number.isNaN(ts)) continue;
-        items.push({ show: showById.get(show.id)!, episode: e, ts });
-      }
-    }
-    return items.sort((a, b) => a.ts - b.ts);
-  });
-}
-
 /** The user's followed shows, newest first. Reactively updates on any change. */
 export function useLibrary(): Show[] | undefined {
   return useLiveQuery(() =>

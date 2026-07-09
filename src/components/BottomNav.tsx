@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { NAV_ITEMS, CALENDAR_ITEM } from './navItems';
+import { NAV_ITEMS } from './navItems';
 
 /** Mobile-first bottom tab bar (hidden on lg where the sidebar takes over). */
 export function BottomNav() {
   const { t } = useTranslation();
-  // Home · Discover · Calendar · Profile
-  const items = [NAV_ITEMS[0], NAV_ITEMS[1], CALENDAR_ITEM, NAV_ITEMS[2]];
+  // Home · Discover · Profile
+  const items = NAV_ITEMS;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-overlay/[0.08] bg-navy-900/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
