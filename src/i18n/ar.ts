@@ -374,6 +374,7 @@ export const ar: Translation = {
     feature_sync: 'مُتزامن عبر أجهزتك',
     get_started: 'ابدأ الآن — مجانًا',
     explore_guest: 'استكشف بدون حساب',
+    continue_google: 'المتابعة عبر Google',
     or: 'أو',
     forgot: 'نسيت كلمة المرور؟',
     forgot_title: 'إعادة تعيين كلمة المرور',

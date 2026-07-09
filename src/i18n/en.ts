@@ -372,6 +372,7 @@ export const en = {
     feature_sync: 'Synced across devices',
     get_started: 'Get started — it’s free',
     explore_guest: 'Explore without an account',
+    continue_google: 'Continue with Google',
     or: 'or',
     forgot: 'Forgot password?',
     forgot_title: 'Reset your password',

@@ -25,6 +25,7 @@ interface AuthState {
   recovery: boolean;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   continueAsGuest: () => void;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -95,6 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearGuest();
   }
 
+  async function signInWithGoogle() {
+    if (!supabase) throw new Error('auth-unavailable');
+    // Redirect back to the app; Supabase completes the session on return and
+    // onAuthStateChange(SIGNED_IN) then runs the local↔cloud sync.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: resetRedirect() },
+    });
+    if (error) throw error;
+  }
+
   async function signOut() {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -138,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         recovery,
         signUp,
         signIn,
+        signInWithGoogle,
         signOut,
         continueAsGuest,
         sendPasswordReset,
