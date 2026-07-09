@@ -23,6 +23,7 @@ const COLUMN_ALIASES = {
     'series',
     'show',
     'tv_show',
+    'tv_show_name',
     'series_title',
     'title',
   ],
@@ -38,6 +39,7 @@ const COLUMN_ALIASES = {
   ],
   season: [
     'season_number',
+    'episode_season_number',
     'season',
     'season_no',
     'seasonnumber',
@@ -69,6 +71,15 @@ const COLUMN_ALIASES = {
 } as const;
 
 type Field = keyof typeof COLUMN_ALIASES;
+
+/**
+ * TV Time appends the same `series_name / movie_name / season / episode` columns
+ * to many non-watch files (ratings, emotions, comments, character votes,
+ * "where to watch", recommendations). Those reference a show/movie but are NOT
+ * watch history, so we skip them by filename to avoid importing things the user
+ * never watched.
+ */
+const NON_WATCH_FILE = /vote|rating|emotion|comment|where-to-watch|recommend/i;
 
 /** Map real headers to our logical fields. Returns null if this file has no watch data. */
 function detectColumns(headers: string[]): Partial<Record<Field, string>> | null {
@@ -118,6 +129,7 @@ function parseDate(v: unknown): number | null {
 
 /** Parse a single CSV file's text into watch rows. */
 export function parseCsv(text: string, sourceFile: string): ParsedWatch[] {
+  if (NON_WATCH_FILE.test(sourceFile)) return [];
   const result = Papa.parse<Record<string, string>>(text, {
     header: true,
     skipEmptyLines: true,
@@ -161,8 +173,12 @@ export function parseCsv(text: string, sourceFile: string): ParsedWatch[] {
 }
 
 // ---------------------------------------------------------------------------
-// Movies — TV Time exports movies in their own files (a title + a watch date,
-// but no season/episode). We detect those and import them separately.
+// Movies — TV Time's real export puts movies alongside episodes in the tracking
+// files (e.g. `tracking-prod-records.csv`): a `movie_name` column is populated
+// for movie rows, while `series_name` / `episode_number` are populated for
+// episode rows. We therefore detect a movie-title column and emit a movie for
+// every row where it is filled — this coexists with the episode parser, which
+// only emits rows that have an episode number.
 // ---------------------------------------------------------------------------
 
 const MOVIE_TITLE_ALIASES = [
@@ -170,16 +186,10 @@ const MOVIE_TITLE_ALIASES = [
   'movie_title',
   'film_name',
   'film_title',
-  'movie',
-  'film',
 ];
-const MOVIE_ID_ALIASES = [
-  'movie_id',
-  'film_id',
-  'tmdb_id',
-  'themoviedb_id',
-  'imdb_id',
-];
+// Movie-specific id columns only (not tmdb_id/imdb_id — in a mixed tracking
+// file those refer to the episode/series, not the movie).
+const MOVIE_ID_ALIASES = ['movie_id', 'film_id'];
 const GENERIC_TITLE_ALIASES = ['title', 'name'];
 
 interface MovieCols {
@@ -189,9 +199,10 @@ interface MovieCols {
 }
 
 /**
- * Detect movie columns. To avoid misreading a series/watchlist file as movies,
- * we require a movie signal: a movie-specific column, or the filename mentioning
- * "movie"/"film". A file that has episode data is never treated as movies.
+ * Detect the movie-title column. Keys on a dedicated `movie_name`-style column,
+ * or — only when the filename clearly mentions "movie"/"film" — a generic title
+ * column. Returns null for files with no movie signal (so series/watchlist
+ * files are never misread as movies).
  */
 function detectMovieColumns(headers: string[], filename: string): MovieCols | null {
   const lower = headers.map((h) => h.trim().toLowerCase());
@@ -203,27 +214,23 @@ function detectMovieColumns(headers: string[], filename: string): MovieCols | nu
     return undefined;
   };
 
-  // If the file carries episode data, it's a series file — not movies.
-  if (find(COLUMN_ALIASES.episode) || find(COLUMN_ALIASES.episodeLabel)) return null;
-
   const movieTitle = find(MOVIE_TITLE_ALIASES);
-  const movieId = find(MOVIE_ID_ALIASES);
   const filenameHint = /movie|film/i.test(filename);
-  if (!movieTitle && !movieId && !filenameHint) return null;
-
-  const title = movieTitle ?? find(GENERIC_TITLE_ALIASES);
-  const id = movieId;
-  if (!title && !id) return null;
+  // Prefer a dedicated movie column; only fall back to a generic title column
+  // when the filename itself signals movies.
+  const title = movieTitle ?? (filenameHint ? find(GENERIC_TITLE_ALIASES) : undefined);
+  if (!title) return null;
 
   return {
-    title: title ?? '',
-    id,
+    title,
+    id: find(MOVIE_ID_ALIASES),
     watchedAt: find(COLUMN_ALIASES.watchedAt),
   };
 }
 
 /** Parse a CSV's text into movie rows (returns [] when it isn't a movie file). */
 export function parseMoviesCsv(text: string, sourceFile: string): ParsedMovie[] {
+  if (NON_WATCH_FILE.test(sourceFile)) return [];
   const result = Papa.parse<Record<string, string>>(text, {
     header: true,
     skipEmptyLines: true,
@@ -264,8 +271,9 @@ export async function parseUpload(file: File): Promise<ParseResult> {
   if (name.endsWith('.zip')) return parseZip(file);
   if (name.endsWith('.csv')) {
     const text = await file.text();
+    // A single file can hold both episode rows and movie rows, so run both.
     const watches = parseCsv(text, file.name);
-    const movies = watches.length ? [] : parseMoviesCsv(text, file.name);
+    const movies = parseMoviesCsv(text, file.name);
     return watches.length || movies.length
       ? { watches, movies, ignoredFiles: [], dataFiles: [file.name] }
       : { watches: [], movies: [], ignoredFiles: [file.name], dataFiles: [] };
@@ -285,12 +293,11 @@ async function parseZip(file: File): Promise<ParseResult> {
   for (const entry of csvEntries) {
     const text = await entry.async('string');
     const short = entry.name.split('/').pop() || entry.name;
+    // A single file can hold both episode rows and movie rows, so run both.
     const rows = parseCsv(text, short);
-    const movieRows = rows.length ? [] : parseMoviesCsv(text, short);
-    if (rows.length) {
+    const movieRows = parseMoviesCsv(text, short);
+    if (rows.length || movieRows.length) {
       watches.push(...rows);
-      dataFiles.push(short);
-    } else if (movieRows.length) {
       movies.push(...movieRows);
       dataFiles.push(short);
     } else {

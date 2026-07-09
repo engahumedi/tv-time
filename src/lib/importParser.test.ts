@@ -57,7 +57,7 @@ describe('parseCsv — format auto-detection', () => {
 describe('parseMoviesCsv — movie detection', () => {
   it('parses a movie file identified by a movie_name column', () => {
     const csv = [
-      'movie_name,tmdb_id,watched_at',
+      'movie_name,movie_id,watched_at',
       'Fight Club,550,2020-05-01',
       'Inception,27205,2021-07-10',
     ].join('\n');
@@ -65,6 +65,21 @@ describe('parseMoviesCsv — movie detection', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].title).toBe('Fight Club');
     expect(rows[0].externalId).toBe('550');
+  });
+
+  it('extracts movies from a mixed tracking file (movie_name filled, no episode)', () => {
+    // TV Time's real export mixes movies and episodes in one file: movie rows
+    // fill movie_name with empty season/episode; episode rows do the opposite.
+    const csv = [
+      'movie_name,series_name,season_number,episode_number,created_at',
+      'The Batman,,,,2023-08-16',
+      ',Suits,3,15,2023-09-05',
+    ].join('\n');
+    const movies = parseMoviesCsv(csv, 'tracking-prod-records.csv');
+    expect(movies).toHaveLength(1);
+    expect(movies[0].title).toBe('The Batman');
+    // and the episode row is NOT picked up as a movie
+    expect(movies.every((m) => m.title !== 'Suits')).toBe(true);
   });
 
   it('parses a generic-title movie file identified by the filename hint', () => {
