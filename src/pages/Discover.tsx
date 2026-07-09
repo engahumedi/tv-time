@@ -26,7 +26,7 @@ import { EmptyState } from '../components/EmptyState';
 import type { Show, Movie } from '../types';
 
 type Kind = 'show' | 'movie';
-type Tab = 'search' | 'trending' | 'top' | 'filters';
+type Tab = 'trending' | 'top' | 'filters';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 1969 }, (_, i) => CURRENT_YEAR - i);
@@ -52,10 +52,7 @@ export function Discover() {
   const [person, setPerson] = useState<Person | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout>>();
 
-  // Demo mode has no browse endpoints — default to search.
-  useEffect(() => {
-    if (!hasTmdbKey) setTab('search');
-  }, []);
+  const searching = query.trim().length > 0;
 
   // Load both genre lists once.
   useEffect(() => {
@@ -81,23 +78,13 @@ export function Discover() {
 
   const filtersActive = genreId !== null || year !== '' || minRating !== 0 || sort !== 'popularity.desc';
 
-  // Search (debounced).
+  // Search (debounced) — active whenever there's a query.
   useEffect(() => {
-    if (tab !== 'search') return;
+    if (!searching) return;
     clearTimeout(debounce.current);
-    const q = query.trim();
-    if (!q) {
-      setPeople([]);
-      if (kind === 'movie') {
-        setMovies(hasTmdbKey ? null : []);
-      } else {
-        setResults(hasTmdbKey ? null : []);
-        if (!hasTmdbKey) searchShows('').then(setResults);
-      }
-      return;
-    }
     setLoading(true);
     setError(false);
+    const q = query.trim();
     debounce.current = setTimeout(async () => {
       try {
         if (kind === 'movie') {
@@ -119,15 +106,22 @@ export function Discover() {
       }
     }, 350);
     return () => clearTimeout(debounce.current);
-  }, [query, tab, kind]);
+  }, [query, kind, searching]);
 
-  // Browse tabs (trending / top / filters).
+  // Browse (trending / top / filters) — active when not searching.
   useEffect(() => {
-    if (tab === 'search') return;
+    if (searching) return;
     setLoading(true);
     setError(false);
     setResults(null);
     setMovies(null);
+    setPeople([]);
+    // Demo mode has no browse endpoints — fall back to the sample library.
+    if (!hasTmdbKey) {
+      searchShows('').then(setResults).catch(() => setError(true)).finally(() => setLoading(false));
+      setMovies([]);
+      return;
+    }
     const filters: DiscoverFilters = { genreId, year, minRating, sort };
     const load =
       kind === 'movie'
@@ -145,17 +139,17 @@ export function Discover() {
       .then((r) => (kind === 'movie' ? setMovies(r as Movie[]) : setResults(r as Show[])))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [tab, kind, genreId, year, minRating, sort]);
+  }, [searching, tab, kind, genreId, year, minRating, sort]);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'trending', label: t('discover.tab_trending') },
     { key: 'top', label: t('discover.tab_top') },
     { key: 'filters', label: t('discover.tab_filters') },
-    { key: 'search', label: t('discover.tab_search') },
   ];
 
   const genres = kind === 'movie' ? movieGenres : tvGenres;
   const hasResults = kind === 'movie' ? movies : results;
+  const showFilters = tab === 'filters' && !searching && hasTmdbKey;
 
   return (
     <div className="pt-2">
@@ -176,7 +170,30 @@ export function Discover() {
         ))}
       </div>
 
-      {hasTmdbKey && (
+      {/* Persistent search bar */}
+      <div className="relative mb-5">
+        <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-faint">
+          <Search size={19} strokeWidth={1.75} />
+        </span>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={kind === 'movie' ? t('discover.placeholder_movie') : t('discover.placeholder')}
+          className="w-full rounded-2xl border border-overlay/[0.08] bg-navy-800 py-3 ps-11 pe-11 text-base outline-none transition-colors placeholder:text-faint focus:border-gold/60"
+        />
+        {searching && (
+          <button
+            onClick={() => setQuery('')}
+            className="absolute inset-y-0 end-2 my-auto grid h-8 w-8 place-items-center rounded-full text-faint hover:text-fg"
+            aria-label={t('filters.clear')}
+          >
+            <X size={18} strokeWidth={2} />
+          </button>
+        )}
+      </div>
+
+      {/* Browse tabs (hidden while searching or in demo) */}
+      {hasTmdbKey && !searching && (
         <div className="no-scrollbar -mx-4 mb-5 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:px-0">
           {tabs.map((tb) => (
             <button
@@ -198,22 +215,7 @@ export function Discover() {
         </div>
       )}
 
-      {tab === 'search' && (
-        <div className="relative mx-auto mb-5 max-w-2xl lg:mx-0">
-          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-faint">
-            <Search size={19} strokeWidth={1.75} />
-          </span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={kind === 'movie' ? t('discover.placeholder_movie') : t('discover.placeholder')}
-            className="w-full rounded-2xl border border-overlay/[0.08] bg-navy-800 py-3 ps-11 pe-4 text-base outline-none transition-colors placeholder:text-faint focus:border-gold/60"
-            autoFocus
-          />
-        </div>
-      )}
-
-      {tab === 'filters' && (
+      {showFilters && (
         <div className="mb-5 space-y-3">
           {/* Genre chips */}
           <div className="no-scrollbar -mx-4 flex flex-wrap gap-2 px-4 lg:mx-0 lg:px-0">
@@ -276,7 +278,7 @@ export function Discover() {
       )}
 
       {/* Personalized rails, seeded from your library (live data only). */}
-      {tab === 'trending' && <ForYou kind={kind} />}
+      {!searching && tab === 'trending' && <ForYou kind={kind} />}
 
       {loading && <GridSkeleton />}
 
@@ -285,7 +287,7 @@ export function Discover() {
       )}
 
       {/* People results (shows search only) */}
-      {!loading && kind === 'show' && tab === 'search' && people.length > 0 && (
+      {!loading && kind === 'show' && searching && people.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
             {t('discover.people')}
@@ -300,15 +302,15 @@ export function Discover() {
 
       {!loading && !error && hasResults && hasResults.length === 0 && (
         <EmptyState
-          icon={tab === 'search' && query ? <SearchX size={22} strokeWidth={1.5} /> : <Film size={22} strokeWidth={1.5} />}
+          icon={searching ? <SearchX size={22} strokeWidth={1.5} /> : <Film size={22} strokeWidth={1.5} />}
           title={
-            tab === 'search' && query
-              ? t('discover.no_results', { query })
+            searching
+              ? t('discover.no_results', { query: query.trim() })
               : tab === 'filters'
                 ? t('filters.no_matches')
                 : t('discover.empty_title')
           }
-          body={tab === 'search' || tab === 'filters' ? '' : t('discover.empty_body')}
+          body={searching || tab === 'filters' ? '' : t('discover.empty_body')}
         />
       )}
 
