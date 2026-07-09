@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCsv, groupBySeries } from './importParser';
+import { parseCsv, groupBySeries, parseMoviesCsv, groupMovies } from './importParser';
 
 describe('parseCsv — format auto-detection', () => {
   it('parses the older seen_episode layout', () => {
@@ -51,6 +51,54 @@ describe('parseCsv — format auto-detection', () => {
     const rows = parseCsv(csv, 'x.csv');
     expect(rows).toHaveLength(1);
     expect(rows[0].seriesName).toBe('Chernobyl');
+  });
+});
+
+describe('parseMoviesCsv — movie detection', () => {
+  it('parses a movie file identified by a movie_name column', () => {
+    const csv = [
+      'movie_name,tmdb_id,watched_at',
+      'Fight Club,550,2020-05-01',
+      'Inception,27205,2021-07-10',
+    ].join('\n');
+    const rows = parseMoviesCsv(csv, 'movies.csv');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].title).toBe('Fight Club');
+    expect(rows[0].externalId).toBe('550');
+  });
+
+  it('parses a generic-title movie file identified by the filename hint', () => {
+    const csv = ['title,watched_at', 'The Matrix,2019-02-02'].join('\n');
+    const rows = parseMoviesCsv(csv, 'tracking-prod-records-movie.csv');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe('The Matrix');
+  });
+
+  it('does NOT treat a series file as movies', () => {
+    const csv = [
+      'series_name,season_number,episode_number,created_at',
+      'Breaking Bad,1,1,2019-03-04',
+    ].join('\n');
+    expect(parseMoviesCsv(csv, 'seen_episode.csv')).toHaveLength(0);
+  });
+
+  it('does NOT treat a generic title file without a movie signal as movies', () => {
+    const csv = ['title,added', 'Some Watchlist Show,2020'].join('\n');
+    expect(parseMoviesCsv(csv, 'watchlist.csv')).toHaveLength(0);
+  });
+});
+
+describe('groupMovies', () => {
+  it('de-duplicates by id and keeps the earliest watch date', () => {
+    const csv = [
+      'movie_name,movie_id,watched_at',
+      'Dune,438631,2022-01-01',
+      'Dune,438631,2021-06-01',
+    ].join('\n');
+    const groups = groupMovies(parseMoviesCsv(csv, 'movies.csv'));
+    expect(groups).toHaveLength(1);
+    expect(groups[0].title).toBe('Dune');
+    expect(groups[0].watchedAt).toBe(new Date('2021-06-01').getTime());
   });
 });
 

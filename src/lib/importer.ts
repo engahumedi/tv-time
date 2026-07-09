@@ -1,14 +1,28 @@
 import type {
   ParsedShowGroup,
+  ParsedMovieGroup,
   WatchRecord,
   ImportSummary,
   Show,
+  Movie,
   Episode,
 } from '../types';
-import { getAllEpisodes, findShowByName, getShowDetail } from './tmdb';
-import { bestMatch, AUTO_MATCH_THRESHOLD } from './match';
+import {
+  getAllEpisodes,
+  findShowByName,
+  getShowDetail,
+  searchMovies,
+  getMovieDetail,
+} from './tmdb';
+import { bestMatch, titleSimilarity, AUTO_MATCH_THRESHOLD } from './match';
 import { searchShows } from './tmdb';
-import { upsertShow, saveEpisodes, bulkImportWatches, recomputeStatus } from './repo';
+import {
+  upsertShow,
+  saveEpisodes,
+  bulkImportWatches,
+  bulkImportMovies,
+  recomputeStatus,
+} from './repo';
 import { episodeId } from './ids';
 
 /**
@@ -66,6 +80,8 @@ export async function commitImport(
     episodesImported: 0,
     duplicatesSkipped: 0,
     totalMinutes: 0,
+    moviesMatched: 0,
+    moviesImported: 0,
   };
 
   let done = 0;
@@ -132,6 +148,93 @@ function buildWatchRecords(
     if (!prev || record.watchedAt < prev.watchedAt) byEpisode.set(id, record);
   }
   return [...byEpisode.values()];
+}
+
+// ---------------------------------------------------------------------------
+// Movies
+// ---------------------------------------------------------------------------
+
+/** Best movie candidate for a title, by normalized-title similarity. */
+function bestMovieMatch(
+  target: string,
+  candidates: Movie[],
+): { movie: Movie | null; score: number } {
+  let best: Movie | null = null;
+  let bestScore = 0;
+  for (const c of candidates) {
+    const score = Math.max(
+      titleSimilarity(target, c.title),
+      c.originalTitle ? titleSimilarity(target, c.originalTitle) : 0,
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return { movie: best, score: bestScore };
+}
+
+/** Auto-match parsed movie groups to TMDB movies. */
+export async function autoMatchMovies(
+  groups: ParsedMovieGroup[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
+  let done = 0;
+  const CONCURRENCY = 4;
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < groups.length) {
+      const group = groups[cursor++];
+      try {
+        const candidates = await searchMovies(group.title);
+        const { movie, score } = bestMovieMatch(group.title, candidates);
+        if (movie && score >= AUTO_MATCH_THRESHOLD) {
+          group.match = movie;
+          group.resolved = true;
+        } else {
+          group.match = movie ?? null;
+          group.resolved = false;
+        }
+      } catch {
+        group.match = null;
+        group.resolved = false;
+      }
+      done++;
+      onProgress?.(done, groups.length);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, groups.length) }, worker),
+  );
+}
+
+/** Commit resolved movie groups: fetch runtime, then insert as watched movies. */
+export async function commitMovies(
+  groups: ParsedMovieGroup[],
+): Promise<{ matched: number; imported: number; minutes: number }> {
+  const resolved = groups.filter((g) => g.resolved && g.match);
+  const movies: Movie[] = [];
+  for (const group of resolved) {
+    const base = group.match!;
+    let full = base;
+    if (!full.runtime) {
+      try {
+        full = await getMovieDetail(base.id);
+      } catch {
+        /* keep the lightweight record */
+      }
+    }
+    movies.push({
+      ...full,
+      watched: true,
+      watchedAt: group.watchedAt ?? Date.now(),
+      addedAt: Date.now(),
+    });
+  }
+  const { imported, minutes } = await bulkImportMovies(movies);
+  return { matched: resolved.length, imported, minutes };
 }
 
 export { findShowByName };

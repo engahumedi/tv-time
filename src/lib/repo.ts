@@ -7,6 +7,8 @@ import {
   cloudDeleteWatch,
   cloudUpsertList,
   cloudDeleteList,
+  cloudUpsertMovie,
+  cloudDeleteMovie,
 } from './cloud';
 import type {
   Show,
@@ -355,6 +357,7 @@ export async function addMovie(movie: Movie): Promise<void> {
     addedAt: existing?.addedAt ?? movie.addedAt,
   };
   await db.movies.put(merged);
+  void cloudUpsertMovie(merged);
 }
 
 /** Mark a movie watched / unwatched (adds it to the library if needed). */
@@ -364,25 +367,55 @@ export async function setMovieWatched(
 ): Promise<void> {
   const existing = await db.movies.get(movie.id);
   const base = existing ?? movie;
-  await db.movies.put({
+  const next: Movie = {
     ...base,
     watched,
     watchedAt: watched ? base.watchedAt ?? Date.now() : undefined,
-  });
+  };
+  await db.movies.put(next);
+  void cloudUpsertMovie(next);
 }
 
 export async function toggleMovieFavorite(id: number): Promise<void> {
   const m = await db.movies.get(id);
   if (!m) return;
-  await db.movies.update(id, { favorite: !m.favorite || undefined });
+  const next: Movie = { ...m, favorite: !m.favorite || undefined };
+  await db.movies.put(next);
+  void cloudUpsertMovie(next);
 }
 
 export async function rateMovie(id: number, rating: number): Promise<void> {
-  await db.movies.update(id, { userRating: rating || undefined });
+  const m = await db.movies.get(id);
+  if (!m) return;
+  const next: Movie = { ...m, userRating: rating || undefined };
+  await db.movies.put(next);
+  void cloudUpsertMovie(next);
 }
 
 export async function removeMovie(id: number): Promise<void> {
   await db.movies.delete(id);
+  void cloudDeleteMovie(id);
+}
+
+/** Bulk-insert imported movies, skipping ones already in the library. */
+export async function bulkImportMovies(
+  movies: Movie[],
+): Promise<{ imported: number; duplicates: number; minutes: number }> {
+  if (!movies.length) return { imported: 0, duplicates: 0, minutes: 0 };
+  const deduped = new Map<number, Movie>();
+  for (const m of movies) deduped.set(m.id, m);
+  const ids = [...deduped.keys()];
+  const existing = new Set(
+    (await db.movies.bulkGet(ids)).filter(Boolean).map((m) => m!.id),
+  );
+  const toInsert = [...deduped.values()].filter((m) => !existing.has(m.id));
+  const duplicates = movies.length - toInsert.length;
+  const minutes = toInsert.reduce((a, m) => a + (m.runtime || 0), 0);
+  if (toInsert.length) {
+    await db.movies.bulkPut(toInsert);
+    for (const m of toInsert) void cloudUpsertMovie(m);
+  }
+  return { imported: toInsert.length, duplicates, minutes };
 }
 
 /** Wipe everything — used by the "reset data" action. */

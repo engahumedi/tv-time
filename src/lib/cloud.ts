@@ -1,13 +1,13 @@
 import { supabase } from './supabase';
 import { db } from './db';
 import { getAllEpisodes } from './tmdb';
-import type { Show, WatchRecord, ShowList } from '../types';
+import type { Show, WatchRecord, ShowList, Movie } from '../types';
 
 /**
  * Two-way sync between the local IndexedDB cache and the user's rows in
- * Supabase. Only `shows` and `watches` are synced — episode metadata stays a
- * local cache that is re-fetched from the API, so we never store bulky,
- * re-derivable data in the cloud.
+ * Supabase. `shows`, `watches`, `lists` and `movies` are synced per-account;
+ * episode metadata stays a local cache that is re-fetched from the API, so we
+ * never store bulky, re-derivable data in the cloud.
  *
  * Every mirror function is a no-op when signed out or when Supabase isn't
  * configured, so the offline/local-only experience is unchanged.
@@ -108,6 +108,53 @@ function rowToList(r: ListRow): ShowList {
   };
 }
 
+// ---- movies ----
+
+function movieToRow(m: Movie) {
+  return {
+    user_id: currentUserId,
+    movie_id: m.id,
+    watched: m.watched,
+    watched_at: m.watchedAt ?? null,
+    added_at: m.addedAt,
+    payload: m,
+  };
+}
+
+function rowToMovie(row: {
+  watched: boolean;
+  watched_at: number | null;
+  added_at: number;
+  payload: Movie;
+}): Movie {
+  return {
+    ...row.payload,
+    watched: row.watched,
+    watchedAt: row.watched_at ?? undefined,
+    addedAt: row.added_at,
+  };
+}
+
+export async function cloudUpsertMovie(movie: Movie): Promise<void> {
+  if (!active()) return;
+  try {
+    await supabase!.from('movies').upsert(movieToRow(movie), {
+      onConflict: 'user_id,movie_id',
+    });
+  } catch {
+    /* offline / table missing — local stays source of truth */
+  }
+}
+
+export async function cloudDeleteMovie(movieId: number): Promise<void> {
+  if (!active()) return;
+  try {
+    await supabase!.from('movies').delete().match({ user_id: currentUserId, movie_id: movieId });
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function cloudUpsertList(list: ShowList): Promise<void> {
   if (!active()) return;
   try {
@@ -196,6 +243,12 @@ async function pushLocal(): Promise<void> {
       .from('lists')
       .upsert(lists.map(listToRow), { onConflict: 'user_id,id' });
   }
+  const movies = await db.movies.toArray();
+  if (movies.length) {
+    await supabase!
+      .from('movies')
+      .upsert(movies.map(movieToRow), { onConflict: 'user_id,movie_id' });
+  }
 }
 
 /** Pull the account's data down and merge it into the local cache. */
@@ -216,6 +269,13 @@ async function pull(): Promise<void> {
     .eq('user_id', currentUserId);
   const lists = (listRows ?? []).map(rowToList);
   if (lists.length) await db.lists.bulkPut(lists);
+
+  const { data: movieRows } = await supabase!
+    .from('movies')
+    .select('watched, watched_at, added_at, payload')
+    .eq('user_id', currentUserId);
+  const movies = (movieRows ?? []).map(rowToMovie);
+  if (movies.length) await db.movies.bulkPut(movies);
 
   // Imported lazily to avoid a static import cycle with repo.ts.
   const { recomputeStatus } = await import('./repo');

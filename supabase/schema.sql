@@ -35,6 +35,16 @@ create table if not exists public.lists (
   primary key (user_id, id)
 );
 
+create table if not exists public.movies (
+  user_id    uuid    not null references auth.users (id) on delete cascade,
+  movie_id   bigint  not null,
+  watched    boolean not null default false,
+  watched_at bigint,
+  added_at   bigint  not null default 0,
+  payload    jsonb   not null,
+  primary key (user_id, movie_id)
+);
+
 create index if not exists watches_user_show_idx
   on public.watches (user_id, show_id);
 
@@ -42,6 +52,7 @@ create index if not exists watches_user_show_idx
 alter table public.shows   enable row level security;
 alter table public.watches enable row level security;
 alter table public.lists   enable row level security;
+alter table public.movies  enable row level security;
 
 drop policy if exists "own shows" on public.shows;
 create policy "own shows" on public.shows
@@ -57,6 +68,12 @@ create policy "own watches" on public.watches
 
 drop policy if exists "own lists" on public.lists;
 create policy "own lists" on public.lists
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own movies" on public.movies;
+create policy "own movies" on public.movies
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

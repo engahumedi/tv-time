@@ -1,6 +1,11 @@
 import Papa from 'papaparse';
 import JSZip from 'jszip';
-import type { ParsedWatch, ParsedShowGroup } from '../types';
+import type {
+  ParsedWatch,
+  ParsedShowGroup,
+  ParsedMovie,
+  ParsedMovieGroup,
+} from '../types';
 
 /**
  * Parses TV Time data exports. TV Time has shipped several export layouts over
@@ -155,8 +160,98 @@ export function parseCsv(text: string, sourceFile: string): ParsedWatch[] {
   return rows;
 }
 
+// ---------------------------------------------------------------------------
+// Movies — TV Time exports movies in their own files (a title + a watch date,
+// but no season/episode). We detect those and import them separately.
+// ---------------------------------------------------------------------------
+
+const MOVIE_TITLE_ALIASES = [
+  'movie_name',
+  'movie_title',
+  'film_name',
+  'film_title',
+  'movie',
+  'film',
+];
+const MOVIE_ID_ALIASES = [
+  'movie_id',
+  'film_id',
+  'tmdb_id',
+  'themoviedb_id',
+  'imdb_id',
+];
+const GENERIC_TITLE_ALIASES = ['title', 'name'];
+
+interface MovieCols {
+  title: string;
+  id?: string;
+  watchedAt?: string;
+}
+
+/**
+ * Detect movie columns. To avoid misreading a series/watchlist file as movies,
+ * we require a movie signal: a movie-specific column, or the filename mentioning
+ * "movie"/"film". A file that has episode data is never treated as movies.
+ */
+function detectMovieColumns(headers: string[], filename: string): MovieCols | null {
+  const lower = headers.map((h) => h.trim().toLowerCase());
+  const find = (aliases: readonly string[]): string | undefined => {
+    for (const a of aliases) {
+      const idx = lower.indexOf(a);
+      if (idx !== -1) return headers[idx];
+    }
+    return undefined;
+  };
+
+  // If the file carries episode data, it's a series file — not movies.
+  if (find(COLUMN_ALIASES.episode) || find(COLUMN_ALIASES.episodeLabel)) return null;
+
+  const movieTitle = find(MOVIE_TITLE_ALIASES);
+  const movieId = find(MOVIE_ID_ALIASES);
+  const filenameHint = /movie|film/i.test(filename);
+  if (!movieTitle && !movieId && !filenameHint) return null;
+
+  const title = movieTitle ?? find(GENERIC_TITLE_ALIASES);
+  const id = movieId;
+  if (!title && !id) return null;
+
+  return {
+    title: title ?? '',
+    id,
+    watchedAt: find(COLUMN_ALIASES.watchedAt),
+  };
+}
+
+/** Parse a CSV's text into movie rows (returns [] when it isn't a movie file). */
+export function parseMoviesCsv(text: string, sourceFile: string): ParsedMovie[] {
+  const result = Papa.parse<Record<string, string>>(text, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim(),
+  });
+  const headers = result.meta.fields ?? [];
+  const cols = detectMovieColumns(headers, sourceFile);
+  if (!cols) return [];
+
+  const rows: ParsedMovie[] = [];
+  for (const row of result.data) {
+    const title = cols.title ? (row[cols.title] ?? '').trim() : '';
+    const externalId = cols.id ? (row[cols.id] ?? '').trim() || undefined : undefined;
+    if (!title && !externalId) continue;
+    rows.push({
+      title: title || `Movie ${externalId}`,
+      externalId,
+      watchedAt: cols.watchedAt ? parseDate(row[cols.watchedAt]) : null,
+      sourceFile,
+    });
+  }
+  return rows;
+}
+
 export interface ParseResult {
   watches: ParsedWatch[];
+  /** Movies parsed from the export. */
+  movies: ParsedMovie[];
   /** Files we opened but found no recognizable watch data in. */
   ignoredFiles: string[];
   /** Files that contained watch data. */
@@ -170,16 +265,18 @@ export async function parseUpload(file: File): Promise<ParseResult> {
   if (name.endsWith('.csv')) {
     const text = await file.text();
     const watches = parseCsv(text, file.name);
-    return watches.length
-      ? { watches, ignoredFiles: [], dataFiles: [file.name] }
-      : { watches: [], ignoredFiles: [file.name], dataFiles: [] };
+    const movies = watches.length ? [] : parseMoviesCsv(text, file.name);
+    return watches.length || movies.length
+      ? { watches, movies, ignoredFiles: [], dataFiles: [file.name] }
+      : { watches: [], movies: [], ignoredFiles: [file.name], dataFiles: [] };
   }
-  return { watches: [], ignoredFiles: [file.name], dataFiles: [] };
+  return { watches: [], movies: [], ignoredFiles: [file.name], dataFiles: [] };
 }
 
 async function parseZip(file: File): Promise<ParseResult> {
   const zip = await JSZip.loadAsync(file);
   const watches: ParsedWatch[] = [];
+  const movies: ParsedMovie[] = [];
   const ignoredFiles: string[] = [];
   const dataFiles: string[] = [];
   const csvEntries = Object.values(zip.files).filter(
@@ -189,23 +286,48 @@ async function parseZip(file: File): Promise<ParseResult> {
     const text = await entry.async('string');
     const short = entry.name.split('/').pop() || entry.name;
     const rows = parseCsv(text, short);
+    const movieRows = rows.length ? [] : parseMoviesCsv(text, short);
     if (rows.length) {
       watches.push(...rows);
+      dataFiles.push(short);
+    } else if (movieRows.length) {
+      movies.push(...movieRows);
       dataFiles.push(short);
     } else {
       ignoredFiles.push(short);
     }
   }
-  return { watches, ignoredFiles, dataFiles };
+  return { watches, movies, ignoredFiles, dataFiles };
 }
 
 /** Merge results from several uploaded files. */
 export function mergeResults(results: ParseResult[]): ParseResult {
   return {
     watches: results.flatMap((r) => r.watches),
+    movies: results.flatMap((r) => r.movies),
     ignoredFiles: [...new Set(results.flatMap((r) => r.ignoredFiles))],
     dataFiles: [...new Set(results.flatMap((r) => r.dataFiles))],
   };
+}
+
+/** De-duplicate parsed movies (by id or normalized title), keeping earliest date. */
+export function groupMovies(movies: ParsedMovie[]): ParsedMovieGroup[] {
+  const groups = new Map<string, ParsedMovieGroup>();
+  for (const m of movies) {
+    const key = m.externalId ? `id:${m.externalId}` : `name:${m.title.toLowerCase()}`;
+    const g = groups.get(key);
+    if (!g) {
+      groups.set(key, {
+        title: m.title,
+        externalId: m.externalId,
+        watchedAt: m.watchedAt,
+        resolved: false,
+      });
+    } else if (m.watchedAt && (!g.watchedAt || m.watchedAt < g.watchedAt)) {
+      g.watchedAt = m.watchedAt;
+    }
+  }
+  return [...groups.values()];
 }
 
 /** Group flat watch rows by series so the UI can preview & match per show. */

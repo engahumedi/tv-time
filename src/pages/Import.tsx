@@ -8,13 +8,19 @@ import {
   parseUpload,
   mergeResults,
   groupBySeries,
+  groupMovies,
 } from '../lib/importParser';
-import { autoMatchGroups, commitImport } from '../lib/importer';
+import {
+  autoMatchGroups,
+  commitImport,
+  autoMatchMovies,
+  commitMovies,
+} from '../lib/importer';
 import { celebrate } from '../lib/celebrate';
 import { formatWatchTime, formatNumber } from '../lib/format';
 import { Poster } from '../components/Poster';
 import { ManualMatchModal } from './ManualMatchModal';
-import type { ParsedShowGroup, ImportSummary, Show } from '../types';
+import type { ParsedShowGroup, ParsedMovieGroup, ImportSummary, Show } from '../types';
 
 type Stage =
   | 'idle'
@@ -30,6 +36,7 @@ export function Import() {
   const { t, i18n } = useTranslation();
   const [stage, setStage] = useState<Stage>('idle');
   const [groups, setGroups] = useState<ParsedShowGroup[]>([]);
+  const [movieGroups, setMovieGroups] = useState<ParsedMovieGroup[]>([]);
   const [ignoredFiles, setIgnoredFiles] = useState<string[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [currentPoster, setCurrentPoster] = useState<Show | null>(null);
@@ -47,18 +54,29 @@ export function Import() {
         const results = await Promise.all(list.map(parseUpload));
         const merged = mergeResults(results);
         setIgnoredFiles(merged.ignoredFiles);
-        if (merged.watches.length === 0) {
+        if (merged.watches.length === 0 && merged.movies.length === 0) {
           setStage('empty');
           return;
         }
         const grouped = groupBySeries(merged.watches);
+        const mGroups = groupMovies(merged.movies);
         setGroups(grouped);
+        setMovieGroups(mGroups);
         setStage('matching');
-        setProgress({ done: 0, total: grouped.length });
-        await autoMatchGroups(grouped, (done, total) =>
-          setProgress({ done, total }),
+        setProgress({ done: 0, total: grouped.length + mGroups.length });
+        let matchedSoFar = 0;
+        await autoMatchGroups(grouped, (done, total) => {
+          matchedSoFar = done;
+          setProgress({ done, total: total + mGroups.length });
+        });
+        await autoMatchMovies(mGroups, (done) =>
+          setProgress({
+            done: matchedSoFar + done,
+            total: grouped.length + mGroups.length,
+          }),
         );
         setGroups([...grouped]);
+        setMovieGroups([...mGroups]);
         setStage('preview');
       } catch {
         setStage('error');
@@ -83,7 +101,14 @@ export function Import() {
       setProgress({ done, total });
       setCurrentPoster(show);
     });
-    setSummary(result);
+    // Bring in the matched movies too.
+    const movieResult = await commitMovies(movieGroups);
+    setSummary({
+      ...result,
+      moviesMatched: movieResult.matched,
+      moviesImported: movieResult.imported,
+      totalMinutes: result.totalMinutes + movieResult.minutes,
+    });
     setStage('done');
     celebrate('big');
   }
@@ -104,6 +129,7 @@ export function Import() {
   const matchedCount = groups.filter((g) => g.resolved && g.match).length;
   const unmatchedCount = groups.length - matchedCount;
   const totalEpisodes = groups.reduce((a, g) => a + g.episodeCount, 0);
+  const matchedMovies = movieGroups.filter((g) => g.resolved && g.match).length;
 
   return (
     <div className="space-y-5 pt-2">
@@ -168,9 +194,12 @@ export function Import() {
 
         {stage === 'preview' && (
           <motion.div key="preview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              <PreviewStat value={formatNumber(groups.length, i18n.language)} label={t('discover.title')} />
+            <div className={`grid gap-3 ${movieGroups.length > 0 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+              <PreviewStat value={formatNumber(groups.length, i18n.language)} label={t('discover.kind_shows')} />
               <PreviewStat value={formatNumber(totalEpisodes, i18n.language)} label={t('common.episodes')} />
+              {movieGroups.length > 0 && (
+                <PreviewStat value={formatNumber(matchedMovies, i18n.language)} label={t('discover.kind_movies')} />
+              )}
               <PreviewStat
                 value={formatNumber(unmatchedCount, i18n.language)}
                 label={t('import.needs_match')}
@@ -197,10 +226,12 @@ export function Import() {
             <div className="sticky bottom-24 space-y-2">
               <button
                 className="btn-gold w-full"
-                disabled={matchedCount === 0}
+                disabled={matchedCount === 0 && matchedMovies === 0}
                 onClick={runImport}
               >
-                {t('import.confirm_import', { count: matchedCount })}
+                {matchedMovies > 0
+                  ? t('import.confirm_with_movies', { shows: matchedCount, movies: matchedMovies })
+                  : t('import.confirm_import', { count: matchedCount })}
               </button>
             </div>
           </motion.div>
@@ -248,6 +279,13 @@ export function Import() {
                   time: formatWatchTime(summary.totalMinutes, t),
                 })}
               </p>
+              {summary.moviesImported > 0 && (
+                <p className="mt-1 text-fg">
+                  {t('import.done_movies', {
+                    n: formatNumber(summary.moviesImported, i18n.language),
+                  })}
+                </p>
+              )}
               {summary.duplicatesSkipped > 0 && (
                 <p className="mt-2 text-sm text-faint">
                   {t('import.done_duplicates', {

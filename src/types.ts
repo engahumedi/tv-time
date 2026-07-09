@@ -134,10 +134,30 @@ export interface ParsedShowGroup {
   resolved: boolean;
 }
 
+/** A raw movie row parsed out of a TV Time export, before matching. */
+export interface ParsedMovie {
+  title: string;
+  /** Any id present in the export (TMDB / IMDb). */
+  externalId?: string;
+  watchedAt: number | null;
+  sourceFile: string;
+}
+
+/** A de-duplicated movie awaiting a TMDB match during import. */
+export interface ParsedMovieGroup {
+  title: string;
+  externalId?: string;
+  watchedAt: number | null;
+  match?: Movie | null;
+  resolved: boolean;
+}
+
 export interface ImportSummary {
   showsMatched: number;
   showsUnmatched: number;
   episodesImported: number;
   duplicatesSkipped: number;
   totalMinutes: number;
+  moviesMatched: number;
+  moviesImported: number;
 }
