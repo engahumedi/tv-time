@@ -129,6 +129,37 @@ export const discoverByGenre = (genreId: number): Promise<Show[]> =>
 export const getRecommendations = (showId: number): Promise<Show[]> =>
   showId < 0 ? Promise.resolve([]) : fetchShowList(`/tv/${showId}/recommendations`);
 
+/** Filters for the Discover "Filters" tab (shared shape for shows + movies). */
+export interface DiscoverFilters {
+  genreId?: number | null;
+  /** Four-digit year as a string, or '' for any. */
+  year?: string;
+  /** Minimum community rating 0–9, or 0 for any. */
+  minRating?: number;
+  /** 'popularity.desc' | 'vote_average.desc' | 'date.desc' */
+  sort?: string;
+}
+
+function buildDiscoverParams(
+  f: DiscoverFilters,
+  dateSort: string,
+  yearKey: string,
+): Record<string, string> {
+  const sort = f.sort === 'date.desc' ? dateSort : f.sort || 'popularity.desc';
+  // Rating sorts need a vote floor or a single 10/10 obscurity wins.
+  const params: Record<string, string> = {
+    sort_by: sort,
+    'vote_count.gte': f.sort === 'vote_average.desc' ? '200' : '50',
+  };
+  if (f.genreId) params.with_genres = String(f.genreId);
+  if (f.year) params[yearKey] = f.year;
+  if (f.minRating) params['vote_average.gte'] = String(f.minRating);
+  return params;
+}
+
+export const discoverShows = (f: DiscoverFilters): Promise<Show[]> =>
+  fetchShowList('/discover/tv', buildDiscoverParams(f, 'first_air_date.desc', 'first_air_date_year'));
+
 /** The TMDB TV genre list, as {id, name}. */
 export async function getGenreList(): Promise<{ id: number; name: string }[]> {
   const map = await loadGenres();
@@ -431,6 +462,15 @@ export const getTopRatedMovies = (): Promise<Movie[]> =>
   fetchMovieList('/movie/top_rated', { 'vote_count.gte': '500' });
 export const getMovieRecommendations = (movieId: number): Promise<Movie[]> =>
   movieId < 0 ? Promise.resolve([]) : fetchMovieList(`/movie/${movieId}/recommendations`);
+
+/** The TMDB movie genre list, as {id, name}. */
+export async function getMovieGenreList(): Promise<{ id: number; name: string }[]> {
+  const map = await loadMovieGenres();
+  return Object.entries(map).map(([id, name]) => ({ id: Number(id), name }));
+}
+
+export const discoverMovies = (f: DiscoverFilters): Promise<Movie[]> =>
+  fetchMovieList('/discover/movie', buildDiscoverParams(f, 'primary_release_date.desc', 'primary_release_year'));
 
 interface TmdbMovieDetail extends TmdbMovieResult {
   genres: { id: number; name: string }[];
