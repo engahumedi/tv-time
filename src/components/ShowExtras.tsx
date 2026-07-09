@@ -67,7 +67,7 @@ export function ShowExtras({ showId }: { showId: number }) {
                 <div key={c.id} className="w-20 shrink-0 text-center">
                   <div className="aspect-square overflow-hidden rounded-full ring-1 ring-overlay/10">
                     {src ? (
-                      <img src={src} alt={c.name} className="h-full w-full object-cover" />
+                      <img src={src} alt={c.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     ) : (
                       <div className="grid h-full w-full place-items-center bg-navy-700 text-faint"><User size={22} strokeWidth={1.5} /></div>
                     )}

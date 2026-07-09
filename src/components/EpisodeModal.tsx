@@ -74,7 +74,7 @@ export function EpisodeModal({
         {/* Still image */}
         <div className="relative aspect-video w-full overflow-hidden rounded-t-3xl bg-navy-700">
           {still ? (
-            <img src={still} alt="" className="h-full w-full object-cover" />
+            <img src={still} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-faint">
               <Film size={36} strokeWidth={1.25} />

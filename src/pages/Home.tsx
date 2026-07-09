@@ -223,7 +223,7 @@ function WatchRow({ item }: { item: WatchListItem }) {
     <motion.div layout className="flex overflow-hidden rounded-2xl border border-overlay/[0.07] bg-navy-800">
       <Link to={`/show/${show.id}`} className="relative w-28 shrink-0 sm:w-32">
         {thumb ? (
-          <img src={thumb} alt="" className="h-full w-full object-cover" />
+          <img src={thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div
             className="h-full w-full"
@@ -326,7 +326,7 @@ function UpcomingRow({ item, lang }: { item: CalendarItem; lang: string }) {
     >
       <div className="w-28 shrink-0 sm:w-32">
         {thumb ? (
-          <img src={thumb} alt="" className="h-full w-full object-cover" />
+          <img src={thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div className="h-full w-full" style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(201,162,75,0.2), transparent 60%), #15131a' }} />
         )}

@@ -39,6 +39,7 @@ export function Poster({ path, alt, size = 'w342', className = '' }: PosterProps
         src={src}
         alt={alt}
         loading="lazy"
+        decoding="async"
         onLoad={() => setLoaded(true)}
         onError={() => setErrored(true)}
         className={`h-full w-full object-cover transition-opacity duration-500 ${

@@ -174,6 +174,7 @@ export function ShowDetail() {
           <img
             src={img(show.backdropPath, 'w780') ?? ''}
             alt=""
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (

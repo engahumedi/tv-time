@@ -89,7 +89,7 @@ export function Profile() {
       {/* Header backdrop */}
       <div className="relative h-40 w-full overflow-hidden lg:h-56">
         {heroBackdrop ? (
-          <img src={heroBackdrop} alt="" className="h-full w-full object-cover" />
+          <img src={heroBackdrop} alt="" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div
             className="h-full w-full"

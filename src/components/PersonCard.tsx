@@ -15,7 +15,7 @@ export function PersonCard({
     <button onClick={onClick} className="group block text-center">
       <div className="mx-auto aspect-square w-full overflow-hidden rounded-full ring-1 ring-overlay/10 transition-all group-hover:ring-gold/50">
         {src ? (
-          <img src={src} alt={person.name} className="h-full w-full object-cover" />
+          <img src={src} alt={person.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div className="grid h-full w-full place-items-center bg-navy-700 text-faint">
             <User size={28} strokeWidth={1.5} />

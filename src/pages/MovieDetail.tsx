@@ -103,7 +103,7 @@ export function MovieDetail() {
       {/* Backdrop hero */}
       <div className="relative -mt-16 h-56 w-full overflow-hidden lg:h-[22rem]">
         {movie.backdropPath ? (
-          <img src={img(movie.backdropPath, 'w780') ?? ''} alt="" className="h-full w-full object-cover" />
+          <img src={img(movie.backdropPath, 'w780') ?? ''} alt="" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div
             className="h-full w-full"

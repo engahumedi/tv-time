@@ -39,7 +39,7 @@ export function PersonModal({
         <div className="flex items-center gap-4 border-b border-overlay/5 p-4">
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full ring-1 ring-overlay/10">
             {src ? (
-              <img src={src} alt="" className="h-full w-full object-cover" />
+              <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
             ) : (
               <div className="grid h-full w-full place-items-center bg-navy-700 text-faint"><User size={26} strokeWidth={1.5} /></div>
             )}
