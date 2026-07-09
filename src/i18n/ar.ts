@@ -22,6 +22,7 @@ export const ar: Translation = {
     loading: 'جارٍ التحميل…',
     retry: 'حاوِل مجددًا',
     close: 'إغلاق',
+    done: 'تم',
     seeAll: 'عرض الكل',
     episodes: 'حلقة',
     episode: 'حلقة',
@@ -151,6 +152,9 @@ export const ar: Translation = {
     delete_confirm: 'حذف هذه القائمة؟',
     add_here: 'أضِف إلى «{{name}}»',
     manage: 'أضِف إلى قوائم',
+    add_items: 'أضِف عناصر',
+    remove_item: 'إزالة من القائمة',
+    nothing_to_add: 'لا يوجد في مكتبتك ما تضيفه بعد.',
   },
   library: {
     title: 'مكتبتك',

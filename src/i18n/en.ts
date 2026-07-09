@@ -20,6 +20,7 @@ export const en = {
     loading: 'Loading…',
     retry: 'Try again',
     close: 'Close',
+    done: 'Done',
     seeAll: 'See all',
     episodes: 'episodes',
     episode: 'episode',
@@ -149,6 +150,9 @@ export const en = {
     delete_confirm: 'Delete this list?',
     add_here: 'Add to “{{name}}”',
     manage: 'Add to lists',
+    add_items: 'Add items',
+    remove_item: 'Remove from list',
+    nothing_to_add: 'Nothing in your library to add yet.',
   },
   library: {
     title: 'Your Library',
