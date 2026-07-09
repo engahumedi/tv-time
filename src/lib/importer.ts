@@ -85,29 +85,41 @@ export async function commitImport(
   };
 
   let done = 0;
-  for (const group of resolved) {
-    const show = group.match!;
-    try {
-      // Ensure we have the full show + episode list stored.
-      const detail = show.numberOfEpisodes ? show : await getShowDetail(show.id);
-      await upsertShow(detail);
-      const episodes = await getAllEpisodes(show.id, detail.episodeRuntime);
-      await saveEpisodes(episodes);
+  // A few shows in flight at once — each does several TMDB calls, so this
+  // cuts a large import's wait time without hammering the API.
+  const CONCURRENCY = 3;
+  let cursor = 0;
 
-      const records = buildWatchRecords(group, episodes, detail.episodeRuntime);
-      const { imported, duplicates, minutes } = await bulkImportWatches(records);
-      await recomputeStatus(show.id);
+  async function worker() {
+    while (cursor < resolved.length) {
+      const group = resolved[cursor++];
+      const show = group.match!;
+      try {
+        // Ensure we have the full show + episode list stored.
+        const detail = show.numberOfEpisodes ? show : await getShowDetail(show.id);
+        await upsertShow(detail);
+        const episodes = await getAllEpisodes(show.id, detail.episodeRuntime);
+        await saveEpisodes(episodes);
 
-      summary.showsMatched++;
-      summary.episodesImported += imported;
-      summary.duplicatesSkipped += duplicates;
-      summary.totalMinutes += minutes;
-    } catch {
-      summary.showsUnmatched++;
+        const records = buildWatchRecords(group, episodes, detail.episodeRuntime);
+        const { imported, duplicates, minutes } = await bulkImportWatches(records);
+        await recomputeStatus(show.id);
+
+        summary.showsMatched++;
+        summary.episodesImported += imported;
+        summary.duplicatesSkipped += duplicates;
+        summary.totalMinutes += minutes;
+      } catch {
+        summary.showsUnmatched++;
+      }
+      done++;
+      onProgress?.(done, resolved.length, show);
     }
-    done++;
-    onProgress?.(done, resolved.length, show);
   }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, resolved.length) }, worker),
+  );
 
   return summary;
 }
@@ -210,30 +222,50 @@ export async function autoMatchMovies(
   );
 }
 
-/** Commit resolved movie groups: fetch runtime, then insert as watched movies. */
+/**
+ * Commit resolved movie groups: fetch runtime, then insert as watched movies.
+ * Runs the runtime look-ups concurrently and reports progress, so importing
+ * many movies stays fast and the UI can show it's still working.
+ */
 export async function commitMovies(
   groups: ParsedMovieGroup[],
+  onProgress?: (done: number, total: number, movie: Movie) => void,
 ): Promise<{ matched: number; imported: number; minutes: number }> {
   const resolved = groups.filter((g) => g.resolved && g.match);
-  const movies: Movie[] = [];
-  for (const group of resolved) {
-    const base = group.match!;
-    let full = base;
-    if (!full.runtime) {
-      try {
-        full = await getMovieDetail(base.id);
-      } catch {
-        /* keep the lightweight record */
+  const movies: Movie[] = new Array(resolved.length);
+  let done = 0;
+  const CONCURRENCY = 4;
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < resolved.length) {
+      const i = cursor++;
+      const group = resolved[i];
+      const base = group.match!;
+      let full = base;
+      if (!full.runtime) {
+        try {
+          full = await getMovieDetail(base.id);
+        } catch {
+          /* keep the lightweight record */
+        }
       }
+      movies[i] = {
+        ...full,
+        watched: true,
+        watchedAt: group.watchedAt ?? Date.now(),
+        addedAt: Date.now(),
+      };
+      done++;
+      onProgress?.(done, resolved.length, base);
     }
-    movies.push({
-      ...full,
-      watched: true,
-      watchedAt: group.watchedAt ?? Date.now(),
-      addedAt: Date.now(),
-    });
   }
-  const { imported, minutes } = await bulkImportMovies(movies);
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, resolved.length) }, worker),
+  );
+
+  const { imported, minutes } = await bulkImportMovies(movies.filter(Boolean));
   return { matched: resolved.length, imported, minutes };
 }
 

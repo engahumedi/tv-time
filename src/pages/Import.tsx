@@ -1,8 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PackageOpen, Check, SearchX, Frown } from 'lucide-react';
+import { PackageOpen, Check, SearchX, Frown, X, RotateCcw, ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
   parseUpload,
@@ -39,16 +39,39 @@ export function Import() {
   const [movieGroups, setMovieGroups] = useState<ParsedMovieGroup[]>([]);
   const [ignoredFiles, setIgnoredFiles] = useState<string[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
-  const [currentPoster, setCurrentPoster] = useState<Show | null>(null);
+  const [currentPoster, setCurrentPoster] = useState<{ posterPath: string | null; name: string } | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [manualGroup, setManualGroup] = useState<ParsedShowGroup | null>(null);
   const [dragging, setDragging] = useState(false);
+  // Items the user chose to leave out of this import (reversible in the preview).
+  const [excludedShows, setExcludedShows] = useState<Set<string>>(new Set());
+  const [excludedMovies, setExcludedMovies] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const showKey = (g: ParsedShowGroup) => g.seriesExternalId ?? g.seriesName;
+  const movieKey = (g: ParsedMovieGroup) => g.externalId ?? g.title;
+
+  function toggleShow(key: string) {
+    setExcludedShows((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+  function toggleMovie(key: string) {
+    setExcludedMovies((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       const list = Array.from(files);
       if (!list.length) return;
+      setExcludedShows(new Set());
+      setExcludedMovies(new Set());
       setStage('reading');
       try {
         const results = await Promise.all(list.map(parseUpload));
@@ -95,14 +118,30 @@ export function Import() {
   );
 
   async function runImport() {
+    // Only import what's matched and not excluded by the user.
+    const showsToImport = groups.filter(
+      (g) => g.resolved && g.match && !excludedShows.has(showKey(g)),
+    );
+    const moviesToImport = movieGroups.filter(
+      (g) => g.resolved && g.match && !excludedMovies.has(movieKey(g)),
+    );
+    const total = showsToImport.length + moviesToImport.length;
+
     setStage('importing');
-    setProgress({ done: 0, total: groups.filter((g) => g.resolved).length });
-    const result = await commitImport(groups, (done, total, show) => {
+    setProgress({ done: 0, total });
+
+    // Shows first, then movies — one continuous progress bar across both.
+    const result = await commitImport(showsToImport, (done, _t, show) => {
       setProgress({ done, total });
-      setCurrentPoster(show);
+      setCurrentPoster({ posterPath: show.posterPath, name: show.name });
     });
-    // Bring in the matched movies too.
-    const movieResult = await commitMovies(movieGroups);
+    const base = showsToImport.length;
+    const movieResult = await commitMovies(moviesToImport, (done, _t, movie) => {
+      setProgress({ done: base + done, total });
+      setCurrentPoster({ posterPath: movie.posterPath, name: movie.title });
+    });
+
+    setProgress({ done: total, total });
     setSummary({
       ...result,
       moviesMatched: movieResult.matched,
@@ -126,10 +165,19 @@ export function Import() {
     setManualGroup(null);
   }
 
-  const matchedCount = groups.filter((g) => g.resolved && g.match).length;
-  const unmatchedCount = groups.length - matchedCount;
-  const totalEpisodes = groups.reduce((a, g) => a + g.episodeCount, 0);
-  const matchedMovies = movieGroups.filter((g) => g.resolved && g.match).length;
+  const { matchedCount, unmatchedCount, totalEpisodes, matchedMovies } = useMemo(() => {
+    const activeShows = groups.filter((g) => !excludedShows.has(showKey(g)));
+    const matched = activeShows.filter((g) => g.resolved && g.match);
+    return {
+      matchedCount: matched.length,
+      unmatchedCount: activeShows.length - matched.length,
+      totalEpisodes: matched.reduce((a, g) => a + g.episodeCount, 0),
+      matchedMovies: movieGroups.filter(
+        (g) => g.resolved && g.match && !excludedMovies.has(movieKey(g)),
+      ).length,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, movieGroups, excludedShows, excludedMovies]);
 
   return (
     <div className="space-y-5 pt-2">
@@ -207,21 +255,44 @@ export function Import() {
               />
             </div>
 
-            {ignoredFiles.length > 0 && (
-              <p className="rounded-xl bg-overlay/5 px-3 py-2 text-xs text-muted">
-                {t('import.ignored_files', { files: ignoredFiles.join(', ') })}
-              </p>
+            {ignoredFiles.length > 0 && <IgnoredFiles files={ignoredFiles} />}
+
+            {/* Shows */}
+            {groups.length > 0 && (
+              <div className="space-y-2">
+                <SectionLabel text={t('discover.kind_shows')} />
+                {groups.map((g) => {
+                  const key = showKey(g);
+                  return (
+                    <GroupRow
+                      key={key}
+                      group={g}
+                      excluded={excludedShows.has(key)}
+                      onMatch={() => setManualGroup(g)}
+                      onToggle={() => toggleShow(key)}
+                    />
+                  );
+                })}
+              </div>
             )}
 
-            <div className="space-y-2">
-              {groups.map((g) => (
-                <GroupRow
-                  key={g.seriesExternalId ?? g.seriesName}
-                  group={g}
-                  onMatch={() => setManualGroup(g)}
-                />
-              ))}
-            </div>
+            {/* Movies */}
+            {movieGroups.length > 0 && (
+              <div className="space-y-2">
+                <SectionLabel text={t('discover.kind_movies')} />
+                {movieGroups.map((g) => {
+                  const key = movieKey(g);
+                  return (
+                    <MovieRow
+                      key={key}
+                      group={g}
+                      excluded={excludedMovies.has(key)}
+                      onToggle={() => toggleMovie(key)}
+                    />
+                  );
+                })}
+              </div>
+            )}
 
             <div className="sticky bottom-24 space-y-2">
               <button
@@ -243,7 +314,7 @@ export function Import() {
               <AnimatePresence mode="popLayout">
                 {currentPoster && (
                   <motion.div
-                    key={currentPoster.id}
+                    key={currentPoster.name}
                     initial={{ scale: 0.7, opacity: 0, rotate: -6 }}
                     animate={{ scale: 1, opacity: 1, rotate: 0 }}
                     exit={{ scale: 0.7, opacity: 0 }}
@@ -258,11 +329,16 @@ export function Import() {
                 )}
               </AnimatePresence>
               <p className="font-semibold">{t('import.importing')}</p>
-              <p className="mt-1 h-5 text-sm text-gold">
+              <p className="mt-1 h-5 truncate max-w-full px-4 text-sm text-gold">
                 {currentPoster?.name}
               </p>
               <div className="mt-4 w-full max-w-xs">
                 <ProgressBar done={progress.done} total={progress.total} />
+                {progress.total > 0 && (
+                  <p className="mt-2 text-xs text-faint">
+                    {progress.done} / {progress.total}
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -340,17 +416,74 @@ export function Import() {
   );
 }
 
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <p className="pt-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted">
+      {text}
+    </p>
+  );
+}
+
+/** Collapsible summary of the export files that held no watch history. */
+function IgnoredFiles({ files }: { files: string[] }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl bg-overlay/5 px-3 py-2 text-xs text-muted">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 text-start"
+      >
+        <span>{t('import.ignored_summary', { n: files.length })}</span>
+        <ChevronDown
+          size={15}
+          strokeWidth={2}
+          className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <p className="mt-2 break-words leading-relaxed text-faint">
+          {files.join(', ')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** A remove / restore toggle used on preview rows. */
+function RemoveButton({ excluded, onToggle }: { excluded: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      onClick={onToggle}
+      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors ${
+        excluded
+          ? 'text-gold hover:bg-gold/10'
+          : 'text-faint hover:bg-rose-500/10 hover:text-rose-300'
+      }`}
+      aria-label={excluded ? t('import.restore') : t('common.remove')}
+      title={excluded ? t('import.restore') : t('common.remove')}
+    >
+      {excluded ? <RotateCcw size={16} strokeWidth={2} /> : <X size={17} strokeWidth={2} />}
+    </button>
+  );
+}
+
 function GroupRow({
   group,
+  excluded,
   onMatch,
+  onToggle,
 }: {
   group: ParsedShowGroup;
+  excluded: boolean;
   onMatch: () => void;
+  onToggle: () => void;
 }) {
   const { t } = useTranslation();
   const resolved = group.resolved && group.match;
   return (
-    <div className="card flex items-center gap-3 p-2.5">
+    <div className={`card flex items-center gap-3 p-2.5 ${excluded ? 'opacity-45' : ''}`}>
       <div className="h-16 w-11 shrink-0">
         {group.match ? (
           <Poster
@@ -366,7 +499,7 @@ function GroupRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold">
+        <p className={`truncate font-semibold ${excluded ? 'line-through' : ''}`}>
           {group.match?.name ?? group.seriesName}
         </p>
         <p className="text-xs text-faint">
@@ -376,18 +509,68 @@ function GroupRow({
           {group.episodeCount} {t('common.episodes')}
         </p>
       </div>
-      {resolved ? (
-        <span className="chip bg-emerald-500/15 text-emerald-300">
-          {t('import.matched')}
-        </span>
-      ) : (
-        <button
-          onClick={onMatch}
-          className="chip bg-gold/15 text-gold hover:bg-gold/25"
-        >
-          {t('import.match_manually')}
-        </button>
-      )}
+      {!excluded &&
+        (resolved ? (
+          <span className="chip bg-emerald-500/15 text-emerald-300">
+            {t('import.matched')}
+          </span>
+        ) : (
+          <button
+            onClick={onMatch}
+            className="chip bg-gold/15 text-gold hover:bg-gold/25"
+          >
+            {t('import.match_manually')}
+          </button>
+        ))}
+      <RemoveButton excluded={excluded} onToggle={onToggle} />
+    </div>
+  );
+}
+
+function MovieRow({
+  group,
+  excluded,
+  onToggle,
+}: {
+  group: ParsedMovieGroup;
+  excluded: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  const resolved = group.resolved && group.match;
+  return (
+    <div className={`card flex items-center gap-3 p-2.5 ${excluded ? 'opacity-45' : ''}`}>
+      <div className="h-16 w-11 shrink-0">
+        {group.match ? (
+          <Poster
+            path={group.match.posterPath}
+            alt={group.match.title}
+            size="w200"
+            className="h-full w-full rounded-md"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center rounded-md bg-navy-700 text-faint">
+            ?
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={`truncate font-semibold ${excluded ? 'line-through' : ''}`}>
+          {group.match?.title ?? group.title}
+        </p>
+        {group.match?.releaseDate && (
+          <p className="text-xs text-faint">{group.match.releaseDate.slice(0, 4)}</p>
+        )}
+      </div>
+      {!excluded &&
+        (resolved ? (
+          <span className="chip bg-emerald-500/15 text-emerald-300">
+            {t('import.matched')}
+          </span>
+        ) : (
+          <span className="chip bg-overlay/10 text-faint">{t('import.needs_match')}</span>
+        ))}
+      <RemoveButton excluded={excluded} onToggle={onToggle} />
     </div>
   );
 }

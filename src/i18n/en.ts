@@ -247,6 +247,8 @@ export const en = {
     preview_episodes: '{{count}} episodes watched',
     preview_unrecognized: '{{count}} shows need your help to match',
     ignored_files: 'Ignored files (no watch data): {{files}}',
+    ignored_summary: '{{n}} files had no watch history and were skipped',
+    restore: 'Restore',
     matched: 'Matched',
     needs_match: 'Needs match',
     match_manually: 'Find match',

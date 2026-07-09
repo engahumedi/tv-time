@@ -249,6 +249,8 @@ export const ar: Translation = {
     preview_episodes: '{{count}} حلقة مُشاهَدة',
     preview_unrecognized: '{{count}} مسلسل يحتاج مساعدتك للمطابقة',
     ignored_files: 'ملفات مُتجاهَلة (بلا سجل مشاهدة): {{files}}',
+    ignored_summary: 'تم تخطّي {{n}} ملف لا يحتوي على سجل مشاهدة',
+    restore: 'استرجاع',
     matched: 'مُطابَق',
     needs_match: 'يحتاج مطابقة',
     match_manually: 'ابحث عن مطابقة',
