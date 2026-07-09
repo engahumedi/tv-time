@@ -18,9 +18,13 @@ Time is shutting down), so users can bring shows, movies, and their whole watch
 history over.
 
 - **Repo:** `engahumedi/tv-time`
-- **Working branch:** `claude/showtrack-tv-tracker-27fepl` (all work lands here; PR opens from it)
+- **Working branch:** `claude/showtrack-tv-tracker-27fepl` — this is the **only** branch on the remote and the **default** branch; GitHub Pages deploys directly from it (see `.github/workflows/deploy-pages.yml`). There is no separate `main`, so there's currently no PR (a base branch would have to be created first).
 - **Live site (GitHub Pages):** https://engahumedi.github.io/tv-time/
-- **Latest commit at handoff:** `cde9417` (Fix TV Time import against the real GDPR export format)
+- **Latest commit:** `2c18ccd` (Performance: split vendor chunks, preconnect CDNs, async image decoding)
+
+> **What changed since the original handoff:** a large batch of features + fixes
+> was added — see **§13 "What's new"** at the end for the full, current list.
+> Sections below are kept up to date inline too.
 
 The owner communicates in **Arabic**; reply in Arabic by default.
 
@@ -80,42 +84,59 @@ src/
 
   lib/
     db.ts                 Dexie schema. v1 shows/episodes/watches, v2 lists, v3 movies.
-    repo.ts               THE single place that mutates the DB. Show + episode + watch + list + movie writes,
-                          status recompute, dedupe, bulk import; every write mirrors to cloud.* .
-    hooks.ts              useLiveQuery hooks: useLibrary, useWatchList, useCalendar, useMovies, useMovie, useLists, etc.
-    cloud.ts              Two-way Supabase sync (shows/watches/lists/movies). Per-action mirrors + full push/pull on login.
-    tmdb.ts               TMDB client via proxy: searchShows/getShowDetail/getAllEpisodes/trending/top/genre/person/extras
-                          + searchMovies/getMovieDetail/getTrendingMovies/getTopRatedMovies. `img()` builds poster URLs.
+    repo.ts               THE single place that mutates the DB. Show/episode/watch/list/movie writes, status recompute,
+                          dedupe, bulk import; setMovieWatchlist, addItemsToList; every write mirrors to cloud.* .
+    hooks.ts              useLiveQuery hooks: useLibrary, useWatchList, useCalendar, useMovies, useMovie, useLists,
+                          useWatchlistMovies, useShowWatches, etc. (useEpisodeCalendar was removed with the Calendar page).
+    cloud.ts              Two-way Supabase sync (shows/watches/lists/movies). movie.watchlist rides in the movie `payload`.
+    tmdb.ts               TMDB client via proxy: searchShows/getShowDetail/getAllEpisodes/trending/top/genre/person/extras,
+                          getRecommendations; searchMovies/getMovieDetail/getTrending/TopRatedMovies/getMovieRecommendations;
+                          discoverShows/discoverMovies + getMovieGenreList (DiscoverFilters: genre/year/minRating/sort/page).
+                          `img()` builds poster URLs. `hasTmdbKey` gates live features.
     omdb.ts               getImdbRating(imdbId) via proxy.
     supabase.ts           Supabase client; hasSupabase; functionsBase() for the proxy URL; anon key.
-    auth.tsx              AuthProvider/useAuth: signIn/signUp/signOut/continueAsGuest/sendPasswordReset/updatePassword; syncAfterLogin.
+    auth.tsx              AuthProvider/useAuth: signIn/signUp/signInWithGoogle/signOut/sendPasswordReset/updatePassword;
+                          syncAfterLogin. NO guest mode — an account is required.
     importParser.ts       Parse TV Time CSVs/ZIP -> ParsedWatch[] + ParsedMovie[]; groupBySeries/groupMovies. (See §7.)
     importer.ts           autoMatchGroups/commitImport (shows) + autoMatchMovies/commitMovies (movies).
     match.ts              normalizeTitle/titleSimilarity/bestMatch + AUTO_MATCH_THRESHOLD (0.72).
-    stats.ts              computeStats (episodes/time/genres), computeBadges (milestones), breakdownTime.
+    stats.ts              computeStats (episodes/time/genres + perWeekday, currentStreak/longestStreak, averageRating,
+                          ratedEpisodes, completionRate), computeBadges (milestones), breakdownTime.
     settings.ts           theme + display name (localStorage) helpers.
     exporter.ts           Export library/history to JSON/CSV.
     format.ts, ids.ts, celebrate.ts, shareCard.ts, demoData.ts
 
   pages/
-    Home.tsx              Tabbed Watch List / Upcoming; TvTimeBanner at top; list/grid toggle; WatchRow mark-watched.
-    Discover.tsx          TV Shows / Movies mode toggle; trending/top/genres/search; ShowCard + MovieCard grids; PersonModal.
-    ShowDetail.tsx        Show page: ratings, seasons/episodes, status, favourite, /10 rating, tags, add-to-list, extras.
-    MovieDetail.tsx       Movie page (/movie/:id): TMDB+IMDb, watched toggle, favourite, /10 rating, remove, add-to-list.
-    Profile.tsx           TV Time-style profile: split Series vs Movies stats + counters, lists, favourites (shows+movies),
-                          library rows, charts, milestones, Year in Review.
-    Lists.tsx             My Lists with TV Shows / Movies toggle (movie lists are separate from show lists).
-    Import.tsx            The importer flow (dropzone -> reading -> matching -> preview -> importing -> done).
-    Settings.tsx          Account, theme (dark/light), language, display name, change password, import (with steps), export, reset.
+    Home.tsx              Tabs: Watch List / Upcoming / Watchlist(movies). TvTimeBanner; list<->grid toggle (grid = LibraryGrid);
+                          "Surprise me" dice (movie roulette). WatchRow mark-watched.
+    Discover.tsx          TV Shows / Movies toggle; PERSISTENT search bar (no more Search tab); tabs Trending / Top / Filters;
+                          Filters = genre + year + min-rating + sort (both kinds). ForYou rail on Trending. PersonModal.
+    ShowDetail.tsx        Show page: ratings, seasons/episodes, status, favourite, /10 rating, tags, add-to-list, EpisodeRatingGraph, extras.
+                          Renders from local cache even if the live fetch fails (offline-safe when in library).
+    MovieDetail.tsx       Movie page (/movie/:id): TMDB+IMDb, watched toggle, want-to-watch (watchlist), favourite, /10, remove, add-to-list.
+    Profile.tsx           Profile: Series & Movies stat cards SIDE BY SIDE; streak/avg-rating/completion highlights; weekday chart;
+                          lists (inline create), favourites, library rows w/ "see all" -> /library, charts, milestones, Year in Review.
+    Library.tsx           /library — full searchable/sortable/filterable grid of ALL shows (LibraryGrid) or movies; ?tab=movies.
+    Lists.tsx             My Lists (TV Shows / Movies toggle). Inline create (NewListModal); per-list add items (ListItemsModal)
+                          + remove item; empty-state CTA.
+    Import.tsx            Importer flow: dropzone -> reading -> matching -> preview (collapsible ignored files, remove shows/movies)
+                          -> importing (concurrent, single progress bar) -> done.
+    Settings.tsx          Account, theme, language, display name, change password, import (steps), export, reset.
     Wrapped.tsx           Year in Review + shareable card.
     ManualMatchModal.tsx  Manual show matching during import.
+    (Calendar.tsx was added then REMOVED — it duplicated Home's Upcoming tab.)
 
-  components/  Layout, Sidebar, BottomNav, Welcome (onboarding), AuthForm, EmptyState, ShowCard, MovieCard,
-               Rating, StarRating, Poster, EpisodeModal, ListPickerModal (kind-aware), TvTimeBanner, etc.
+  components/  Layout, Sidebar, BottomNav (Home·Discover·Profile), Welcome (auth-only, no guest), AuthForm (Google + email),
+               EmptyState, ShowCard, MovieCard (watched + bookmark), Rating, StarRating, Poster (lazy/async),
+               EpisodeModal, EpisodeRatingGraph, LibraryGrid (search/sort/filter/bulk-select), ForYou (recs),
+               RandomPickModal (movie roulette), NewListModal, ListItemsModal, BulkListModal,
+               ListPickerModal (kind-aware), PersonCard/PersonModal, ShowExtras, TvTimeBanner, etc.
 
 supabase/
   schema.sql              Run once in Supabase SQL editor: creates shows/watches/lists/movies + RLS policies.
-  functions/api/index.ts  Edge Function proxy (Deno) that adds the TMDB/OMDb keys server-side.
+  functions/api/index.ts  Edge Function proxy (Deno): adds TMDB/OMDb keys server-side + caches responses (edge + browser),
+                          never caches errors. Deploy via Management API PATCH /v1/projects/{ref}/functions/api (JSON body:
+                          {body: source, verify_jwt:false}) — use curl, not python-urllib (Cloudflare blocks its UA).
 ```
 
 ---
@@ -127,7 +148,7 @@ supabase/
 - `episodes` (key `id = "showId:season:number"`) — episode cache (re-fetched from TMDB; not synced).
 - `watches` (key `episodeId`) — a watch record per episode (dedup by episode id); has rating (1–5) + note.
 - `lists` (key `id`) — user collections. Field `kind: 'show' | 'movie'` (default 'show'); `showIds` holds show OR movie ids per kind.
-- `movies` (key `id`) — movies: `{ watched, watchedAt, userRating (1–10), favorite, runtime, ... }`.
+- `movies` (key `id`) — movies: `{ watched, watchedAt, watchlist (want-to-watch), userRating (1–10), favorite, runtime, ... }`.
 
 ### Cloud (Supabase — `supabase/schema.sql`)
 Per-user tables with Row-Level-Security (each account sees only its own rows):
@@ -150,7 +171,8 @@ been applied to the live Supabase project.
 - **Anon key + URL** are injected at build time by the GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) as `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`. The anon key is safe to expose (RLS protects data). The TMDB/OMDb keys are NOT in the client — they live in the Edge Function proxy.
 - **Applying schema changes:** `supabase/schema.sql` is idempotent — run it in the Supabase SQL editor. (It can also be applied via the Supabase Management API `POST /v1/projects/{ref}/database/query` with a Personal Access Token, but **do not store that token anywhere**; the owner should keep it revoked when not actively migrating.)
 - **Deploy:** push to the branch → GitHub Actions builds and deploys to Pages. Pages source must be "GitHub Actions" (not "deploy from branch"). Vite `base` is `/tv-time/` in build so assets resolve. Fastly/CDN can serve a stale edge for a bit after deploy.
-- **Auth flow:** auth-first onboarding (`Welcome`) only shows when Supabase is configured and the user is neither signed in nor a guest. `continueAsGuest` sets a localStorage flag. Password reset via email link → `ResetPassword`. `updatePassword` is also used by Settings → change password.
+- **Auth flow:** account **required** — the `Welcome` screen shows whenever Supabase is configured and no user is signed in (guest mode was removed). Sign in with **email/password** or **Google** (`signInWithGoogle` → `supabase.auth.signInWithOAuth`; redirect back = app base URL). The Google provider + Client ID/Secret are configured in the Supabase dashboard, and the OAuth client + redirect (`…supabase.co/auth/v1/callback`) in Google Cloud (app published, non-sensitive scopes only). On `SIGNED_IN`, `syncAfterLogin()` runs. Password reset via email link → `ResetPassword`; `updatePassword` also used by Settings → change password.
+- **TMDB/OMDb proxy caching:** the Edge Function caches successful browse/detail responses at the edge (Deno Cache API, shared) + in the browser (`Cache-Control`: 24h browse, 5 min search); failures are `no-store`. Deployed as function **v3** (`verify_jwt:false`). Cuts upstream TMDB calls and repeat invocations.
 
 ---
 
@@ -181,13 +203,24 @@ false positives. (Matching needs TMDB network, which is blocked in the sandbox
 but works on the live site.)
 
 Import flow (`Import.tsx`): dropzone → parse → auto-match (shows + movies) →
-preview (counts, per-show match rows, manual-match) → commit → done summary.
+preview → commit → done summary. Preview improvements: the "ignored files" list
+is a **collapsible one-line summary** (not a wall of filenames); each show AND
+movie row has a **remove/restore** toggle so you can drop items before importing
+(counts + confirm button update live). Commit runs shows (concurrency 3) then
+movies (concurrency 4) with a **single continuous progress bar + "done/total"
+counter**, then the clear "All done!" screen. `commitMovies` takes an
+`onProgress` callback.
 
 ---
 
 ## 8. Features implemented (all live)
 
-- Track shows + episodes; "watch next" list; upcoming/calendar; mark watched; season/show bulk-watch; status.
+> This is the original baseline list. **Newer features (rating graph, library
+> browser + bulk actions, movie watchlist, deeper stats, recommendations, movie
+> roulette, Discover filters, Library page, list management, Google sign-in) are
+> in §13.** Note the Calendar page was later removed (use Home → Upcoming).
+
+- Track shows + episodes; "watch next" list; upcoming; mark watched; season/show bulk-watch; status.
 - **Movies** as a first-class entity: Discover movie search/trending/top, MovieCard one-tap watched, MovieDetail page with TMDB+IMDb ratings, watched toggle, favourite, **1–10 rating**, remove, add-to-list.
 - Ratings: 5-star per episode, /10 per show and per movie. Favourites (heart) for shows and movies. Tags + notes for shows.
 - **Lists**: separate **show lists** and **movie lists** (`kind`), created/viewed under a TV Shows / Movies toggle; kind-aware "N shows / N movies" counts; add-to-list from show and movie detail pages.
@@ -236,10 +269,12 @@ preview (counts, per-show match rows, manual-match) → commit → done summary.
 
 ## 11. Optional next steps (not started)
 
-- **Email notifications** for new episodes (needs a Resend API key + Supabase Edge Function/cron). Discussed, not built.
-- **Google sign-in** (needs the owner to create a Google OAuth Client ID/Secret in Google Cloud and add it in Supabase Auth).
-- Extend `exporter.ts` to include movies in the JSON/CSV backup.
-- Optional: a movies "Upcoming/coming soon" surface; movie tags/notes; import of TV Time user lists (`lists-prod-lists.csv`).
+- **PWA** (installable + offline) — no `manifest`/service worker yet; strong low-effort win given the local-first design.
+- **"Continue watching"** rail on Home (next unwatched episode per active show).
+- **Email notifications** for new episodes (needs a Resend API key + Supabase Edge Function/cron).
+- Extend `exporter.ts` to include **movies** in the JSON/CSV backup (currently shows only).
+- Movie **collections** (TMDB), movie **upcoming** surface, movie tags/notes, import of TV Time user lists (`lists-prod-lists.csv`).
+- (Done already: Google sign-in ✅, Discover filters ✅, movie watchlist ✅, vendor code-splitting ✅.)
 
 ---
 
@@ -248,3 +283,34 @@ preview (counts, per-show match rows, manual-match) → commit → done summary.
 - The **Supabase Personal Access Token** the owner shared earlier (used to apply migrations) must be **revoked** in Supabase → Account → Access Tokens when not actively migrating. Never store it in the repo or in any file.
 - Never commit TV Time export data (it contains the user's email, IPs, tokens). Extract only to the ephemeral scratchpad and delete after testing.
 - The Supabase anon key is public by design (RLS enforces per-user access). TMDB/OMDb keys stay server-side in the Edge Function proxy.
+- A PAT was used to deploy the Edge Function (§6) and create a demo user; it must be revoked when idle. The **service_role** key (fetchable via the Management API `…/api-keys`) is all-powerful — never print it, store it, or commit it.
+
+---
+
+## 13. What's new (features & changes added since the original handoff)
+
+All built on `claude/showtrack-tv-tracker-27fepl`, each: `tsc + vite` build, `vitest` (27 tests), and driven in Chromium (seeded IndexedDB / mocked TMDB) with 0 JS errors before commit.
+
+**Features**
+- **Episode rating graph** (`components/EpisodeRatingGraph.tsx`) on ShowDetail — per-episode star ratings across the run, coloured by season, from existing `watches.rating`.
+- **Library browser** (`components/LibraryGrid.tsx`) — search + sort (recent/A–Z/rating) + status filter + multi-select **bulk actions** (mark watched, add to list via `BulkListModal`, remove). Used by Home's grid tab and the Library page.
+- **Movie watchlist** ("want to watch") — `Movie.watchlist`; `repo.setMovieWatchlist`; `hooks.useWatchlistMovies`; bookmark toggles on `MovieCard`/`MovieDetail`; Home **Watchlist** tab. Syncs via the movie `payload` (no schema change).
+- **Deeper profile stats** — streaks, average rating, completion rate, weekday chart (`stats.ts`); Series & Movies stats rendered **side by side** (StatCard).
+- **"Because you watched X"** (`components/ForYou.tsx`) — recommendation rails on Discover, seeded from the library (live TMDB only).
+- **Surprise me** (`components/RandomPickModal.tsx`) — **movie roulette**: pick a genre → random movie (Shuffle/Watch). Home dice, gated on `hasTmdbKey`. (It used to pick from shows+watchlist; changed to movies-only.)
+- **Discover filters** — `discoverShows`/`discoverMovies`/`getMovieGenreList` + `DiscoverFilters`; a Filters tab (genre/year/min-rating/sort) for both kinds. **Search is now a persistent bar** (no Search tab).
+- **Library page** (`pages/Library.tsx`, `/library`) — "see all" from Profile; Shows/Movies toggle (`?tab=movies`).
+- **Lists management** — inline create (`NewListModal`) from Profile & Lists; add/remove items per list (`ListItemsModal` + `toggleShowInList`/`addItemsToList`); empty-state CTA; live counts.
+- **Google sign-in** — `auth.signInWithGoogle`; button in `AuthForm`. **Guest mode removed** (account required).
+
+**Fixes / changes**
+- Profile header: content wrapper `relative z-10` so the backdrop no longer covers the name/avatar (CSS paint order).
+- ShowDetail renders from the local cache when the live fetch fails (offline-safe for in-library shows).
+- Import overhaul (see §7).
+- **Calendar page removed** (route, page, `useEpisodeCalendar`, nav entries) — duplicated Home's Upcoming.
+
+**Backend / performance**
+- TMDB/OMDb proxy **caching** (edge + browser, errors `no-store`), deployed as function v3 (see §6).
+- **Vendor code-splitting** (`vite.config.ts` `manualChunks`): main app chunk ~235 KB → ~33 KB gzip; recharts lazy; chunk-size warning gone. Preconnect to `image.tmdb.org` + Supabase; `loading="lazy"`/`decoding="async"` on images.
+
+**Where things live now (quick index):** rating graph → ShowDetail; library search/bulk → Home grid + /library; movie watchlist → MovieCard/MovieDetail + Home Watchlist tab; recs → Discover (Trending); roulette → Home dice; filters + search → Discover; lists mgmt → Lists page; Google/auth → Welcome/AuthForm; caching → `supabase/functions/api/index.ts`.
