@@ -8,6 +8,7 @@ import {
   useShow,
   useEpisodes,
   useWatchedIds,
+  useShowWatches,
   useIsInLibrary,
 } from '../lib/hooks';
 import {
@@ -31,6 +32,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { EpisodeModal } from '../components/EpisodeModal';
+import { EpisodeRatingGraph } from '../components/EpisodeRatingGraph';
 import { ShowExtras } from '../components/ShowExtras';
 import { ListPickerModal } from '../components/ListPickerModal';
 import type { Show, Episode, ShowStatus } from '../types';
@@ -90,6 +92,7 @@ export function ShowDetail() {
   const show = inLibrary ? storedShow : previewShow;
   const episodes = inLibrary ? storedEpisodes ?? [] : previewEpisodes;
   const watchedIds = useWatchedIds(showId);
+  const showWatches = useShowWatches(showId);
 
   const seasons = useMemo(() => groupSeasons(episodes), [episodes]);
 
@@ -108,7 +111,9 @@ export function ShowDetail() {
   }, [imdbId]);
 
   if (loading && !show) return <DetailSkeleton />;
-  if (error || !show) {
+  // A failed live fetch only blocks the page when we have nothing stored to fall
+  // back on — an already-followed show still renders fully from the local cache.
+  if ((error && !inLibrary) || !show) {
     return (
       <div className="flex flex-col items-center pt-16 text-center">
         <Frown size={36} strokeWidth={1.5} className="text-muted" />
@@ -400,6 +405,11 @@ export function ShowDetail() {
             </div>
           )}
         </section>
+
+        {/* Your episode ratings across the show's run */}
+        {inLibrary && (
+          <EpisodeRatingGraph episodes={episodes} watches={showWatches ?? []} />
+        )}
 
         {/* Trailer · cast · recommendations (live data) */}
         <ShowExtras showId={showId} />

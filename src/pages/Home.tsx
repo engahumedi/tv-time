@@ -2,35 +2,46 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Tv, CalendarClock, Check, ChevronRight, LayoutGrid, List as ListIco } from 'lucide-react';
+import { Tv, CalendarClock, Check, ChevronRight, LayoutGrid, List as ListIco, Dices, Clapperboard } from 'lucide-react';
 import {
   useWatchList,
   useLibrary,
   useCalendar,
+  useWatchlistMovies,
   type WatchListItem,
   type CalendarItem,
 } from '../lib/hooks';
 import { img } from '../lib/tmdb';
-import { ShowCard } from '../components/ShowCard';
+import { LibraryGrid } from '../components/LibraryGrid';
+import { MovieCard } from '../components/MovieCard';
 import { EmptyState } from '../components/EmptyState';
 import { TvTimeBanner } from '../components/TvTimeBanner';
+import { RandomPickModal } from '../components/RandomPickModal';
 import { markWatched } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
+import type { Movie } from '../types';
 
 const STALE_MS = 30 * 864e5; // 30 days
 
+type Tab = 'list' | 'upcoming' | 'movies';
+
 export function Home() {
   const { t, i18n } = useTranslation();
-  const [tab, setTab] = useState<'list' | 'upcoming'>('list');
+  const [tab, setTab] = useState<Tab>('list');
   const [grid, setGrid] = useState(false);
+  const [random, setRandom] = useState(false);
   const watchList = useWatchList();
   const library = useLibrary();
+  const watchlistMovies = useWatchlistMovies();
   const navigate = useNavigate();
 
-  if (watchList === undefined || library === undefined) return <Skeleton />;
+  if (watchList === undefined || library === undefined || watchlistMovies === undefined)
+    return <Skeleton />;
 
-  if (library.length === 0) {
+  const canPick = watchList.length > 0 || watchlistMovies.length > 0;
+
+  if (library.length === 0 && watchlistMovies.length === 0) {
     return (
       <div className="pt-1">
         <TvTimeBanner />
@@ -48,42 +59,89 @@ export function Home() {
     );
   }
 
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'list', label: t('home.watch_list') },
+    { key: 'upcoming', label: t('home.upcoming') },
+    { key: 'movies', label: t('movie.watchlist') },
+  ];
+
   return (
     <div className="pt-1">
       <TvTimeBanner />
       {/* Tabs — underlined, editorial */}
       <div className="mb-5 flex items-end justify-between border-b border-overlay/[0.08]">
-        <div className="flex gap-6">
-          {(['list', 'upcoming'] as const).map((tb) => (
+        <div className="no-scrollbar flex gap-6 overflow-x-auto">
+          {tabs.map((tb) => (
             <button
-              key={tb}
-              onClick={() => setTab(tb)}
-              className={`-mb-px border-b-2 pb-2.5 text-sm font-semibold transition-colors ${
-                tab === tb
+              key={tb.key}
+              onClick={() => setTab(tb.key)}
+              className={`-mb-px shrink-0 border-b-2 pb-2.5 text-sm font-semibold transition-colors ${
+                tab === tb.key
                   ? 'border-gold text-fg'
                   : 'border-transparent text-muted hover:text-fg'
               }`}
             >
-              {tb === 'list' ? t('home.watch_list') : t('home.upcoming')}
+              {tb.label}
             </button>
           ))}
         </div>
-        {tab === 'list' && (
-          <button
-            onClick={() => setGrid((g) => !g)}
-            className="mb-1.5 grid h-8 w-8 place-items-center rounded-md text-muted hover:text-fg"
-            aria-label={grid ? 'List view' : 'Grid view'}
-          >
-            {grid ? <ListIco size={18} strokeWidth={1.75} /> : <LayoutGrid size={18} strokeWidth={1.75} />}
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {canPick && (
+            <button
+              onClick={() => setRandom(true)}
+              className="mb-1.5 grid h-8 w-8 place-items-center rounded-md text-muted hover:text-gold"
+              aria-label={t('random.open')}
+              title={t('random.open')}
+            >
+              <Dices size={18} strokeWidth={1.75} />
+            </button>
+          )}
+          {tab === 'list' && (
+            <button
+              onClick={() => setGrid((g) => !g)}
+              className="mb-1.5 grid h-8 w-8 place-items-center rounded-md text-muted hover:text-fg"
+              aria-label={grid ? 'List view' : 'Grid view'}
+            >
+              {grid ? <ListIco size={18} strokeWidth={1.75} /> : <LayoutGrid size={18} strokeWidth={1.75} />}
+            </button>
+          )}
+        </div>
       </div>
 
       {tab === 'list' ? (
         <WatchListView items={watchList} grid={grid} library={library} />
-      ) : (
+      ) : tab === 'upcoming' ? (
         <UpcomingView lang={i18n.language} />
+      ) : (
+        <MoviesView movies={watchlistMovies} />
       )}
+
+      {random && <RandomPickModal onClose={() => setRandom(false)} />}
+    </div>
+  );
+}
+
+function MoviesView({ movies }: { movies: Movie[] }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  if (movies.length === 0) {
+    return (
+      <EmptyState
+        icon={<Clapperboard size={22} strokeWidth={1.5} />}
+        title={t('movie.watchlist_empty_title')}
+        body={t('movie.watchlist_empty_body')}
+      >
+        <button className="btn-gold" onClick={() => navigate('/discover')}>
+          {t('home.empty_cta')}
+        </button>
+      </EmptyState>
+    );
+  }
+  return (
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+      {movies.map((m) => (
+        <MovieCard key={m.id} movie={m} />
+      ))}
     </div>
   );
 }
@@ -100,13 +158,7 @@ function WatchListView({
   const { t } = useTranslation();
 
   if (grid) {
-    return (
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
-        {library.map((s) => (
-          <ShowCard key={s.id} show={s} />
-        ))}
-      </div>
-    );
+    return <LibraryGrid shows={library} />;
   }
 
   if (items.length === 0) {

@@ -429,6 +429,8 @@ export const getTrendingMovies = (): Promise<Movie[]> =>
   fetchMovieList('/trending/movie/week');
 export const getTopRatedMovies = (): Promise<Movie[]> =>
   fetchMovieList('/movie/top_rated', { 'vote_count.gte': '500' });
+export const getMovieRecommendations = (movieId: number): Promise<Movie[]> =>
+  movieId < 0 ? Promise.resolve([]) : fetchMovieList(`/movie/${movieId}/recommendations`);
 
 interface TmdbMovieDetail extends TmdbMovieResult {
   genres: { id: number; name: string }[];

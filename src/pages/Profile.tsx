@@ -23,6 +23,9 @@ import {
   Hourglass,
   Library,
   Trophy,
+  Flame,
+  Star,
+  CheckCircle2,
   type LucideProps,
 } from 'lucide-react';
 import { useLibrary, useAllWatches, useLists, useMovies } from '../lib/hooks';
@@ -139,6 +142,33 @@ export function Profile() {
                 <StatTile value={formatNumber(watchedMovies.length, lang)} label={t('profile.movies_watched')} />
               </div>
             </div>
+
+            {/* Highlights — streaks, rating, completion */}
+            {stats.totalEpisodes > 0 && (
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Highlight
+                  icon={Flame}
+                  value={t('profile.streak_days', { n: formatNumber(stats.currentStreak, lang) })}
+                  label={t('profile.current_streak')}
+                  active={stats.currentStreak > 0}
+                />
+                <Highlight
+                  icon={Award}
+                  value={t('profile.streak_days', { n: formatNumber(stats.longestStreak, lang) })}
+                  label={t('profile.longest_streak')}
+                />
+                <Highlight
+                  icon={Star}
+                  value={stats.ratedEpisodes ? stats.averageRating.toFixed(1) : '—'}
+                  label={t('profile.avg_rating')}
+                />
+                <Highlight
+                  icon={CheckCircle2}
+                  value={`${Math.round(stats.completionRate * 100)}%`}
+                  label={t('profile.completion')}
+                />
+              </div>
+            )}
           </section>
 
           {/* Lists */}
@@ -236,6 +266,34 @@ export function Profile() {
                   </section>
                 )}
               </div>
+
+              {/* Watch pattern by weekday */}
+              {stats.perWeekday.some((d) => d.count > 0) && (
+                <section>
+                  <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-muted">
+                    {t('profile.by_weekday')}
+                  </h2>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart
+                      data={stats.perWeekday.map((d) => ({
+                        ...d,
+                        label: weekdayLabels(lang)[d.weekday],
+                      }))}
+                      margin={{ top: 8, right: 4, bottom: 0, left: -20 }}
+                    >
+                      <XAxis dataKey="label" tick={{ fill: '#8a8a86', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#6a6a66', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={32} />
+                      <Tooltip cursor={{ fill: 'rgba(128,128,128,0.1)' }} contentStyle={tooltipStyle} labelStyle={{ color: 'rgb(var(--fg))' }} />
+                      <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={40}>
+                        {stats.perWeekday.map((d, i) => {
+                          const peak = Math.max(...stats.perWeekday.map((x) => x.count));
+                          return <Cell key={i} fill={d.count === peak && peak > 0 ? GOLD : GOLD_DIM} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </section>
+              )}
 
               {/* Milestones */}
               <section>
@@ -351,4 +409,31 @@ function StatTile({ value, label }: { value: string; label: string }) {
       <p className="mt-0.5 text-xs text-muted">{label}</p>
     </div>
   );
+}
+
+function Highlight({
+  icon: Icon,
+  value,
+  label,
+  active,
+}: {
+  icon: ComponentType<LucideProps>;
+  value: string;
+  label: string;
+  active?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-overlay/[0.08] bg-navy-800 p-3.5">
+      <Icon size={18} strokeWidth={1.75} className={active ? 'text-gold' : 'text-muted'} />
+      <p className="mt-2 font-display text-xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-0.5 text-[11px] leading-tight text-muted">{label}</p>
+    </div>
+  );
+}
+
+/** Short localized weekday labels, index 0 = Sunday … 6 = Saturday. */
+function weekdayLabels(lang: string): string[] {
+  const fmt = new Intl.DateTimeFormat(lang === 'ar' ? 'ar' : undefined, { weekday: 'short' });
+  // 2023-01-01 was a Sunday — walk seven days to get locale-correct labels.
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2023, 0, 1 + i)));
 }

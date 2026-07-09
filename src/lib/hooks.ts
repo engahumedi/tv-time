@@ -16,6 +16,22 @@ export function useMovie(id: number): Movie | null | undefined {
   return useLiveQuery(async () => (await db.movies.get(id)) ?? null, [id]);
 }
 
+/** Movies on the "want to watch" list (queued, not yet watched), newest first. */
+export function useWatchlistMovies(): Movie[] | undefined {
+  return useLiveQuery(async () => {
+    const movies = await db.movies.orderBy('addedAt').reverse().toArray();
+    return movies.filter((m) => m.watchlist && !m.watched);
+  });
+}
+
+/** All watch records for a single show (with ratings/notes), reactive. */
+export function useShowWatches(showId: number): WatchRecord[] | undefined {
+  return useLiveQuery(
+    () => db.watches.where('showId').equals(showId).toArray(),
+    [showId],
+  );
+}
+
 export interface WatchListItem {
   show: Show;
   episode: Episode;
@@ -92,6 +108,29 @@ export function useCalendar(): CalendarItem[] | undefined {
       }
     }
     return items.sort((a, b) => a.ts - b.ts).slice(0, 100);
+  });
+}
+
+/**
+ * Every episode (past or future) from followed shows that has a valid air
+ * date, paired with its show — powers the full month calendar so any month can
+ * be browsed, not just the next couple of weeks.
+ */
+export function useEpisodeCalendar(): CalendarItem[] | undefined {
+  return useLiveQuery(async () => {
+    const shows = await db.shows.toArray();
+    const showById = new Map(shows.map((s) => [s.id, s]));
+    const items: CalendarItem[] = [];
+    for (const show of shows) {
+      const eps = await db.episodes.where('showId').equals(show.id).toArray();
+      for (const e of eps) {
+        if (!e.airDate) continue;
+        const ts = new Date(e.airDate).getTime();
+        if (Number.isNaN(ts)) continue;
+        items.push({ show: showById.get(show.id)!, episode: e, ts });
+      }
+    }
+    return items.sort((a, b) => a.ts - b.ts);
   });
 }
 

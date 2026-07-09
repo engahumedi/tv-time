@@ -59,6 +59,8 @@ export interface Movie {
   favorite?: boolean;
   /** Whether the user has watched it. */
   watched: boolean;
+  /** On the "want to watch" list (a movie can be queued before it's watched). */
+  watchlist?: boolean;
   /** Epoch ms of when it was watched (undefined until watched). */
   watchedAt?: number;
   /** When the movie was added to the library. */

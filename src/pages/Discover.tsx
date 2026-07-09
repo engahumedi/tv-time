@@ -16,6 +16,7 @@ import {
 } from '../lib/tmdb';
 import { ShowCard } from '../components/ShowCard';
 import { MovieCard } from '../components/MovieCard';
+import { ForYou } from '../components/ForYou';
 import { PersonCard } from '../components/PersonCard';
 import { PersonModal } from '../components/PersonModal';
 import { EmptyState } from '../components/EmptyState';
@@ -214,6 +215,9 @@ export function Discover() {
           {t('discover.demo_notice')}
         </p>
       )}
+
+      {/* Personalized rails, seeded from your library (live data only). */}
+      {tab === 'trending' && <ForYou kind={kind} />}
 
       {loading && <GridSkeleton />}
 

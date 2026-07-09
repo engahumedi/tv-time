@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, Heart, Check, Trash2, Plus } from 'lucide-react';
+import { ChevronLeft, Heart, Check, Trash2, Plus, Bookmark } from 'lucide-react';
 import { getMovieDetail, img } from '../lib/tmdb';
 import { getImdbRating, type ImdbRating } from '../lib/omdb';
 import { useMovie } from '../lib/hooks';
 import {
   addMovie,
   setMovieWatched,
+  setMovieWatchlist,
   toggleMovieFavorite,
   rateMovie,
   removeMovie,
@@ -49,6 +50,7 @@ export function MovieDetail() {
   const movie = stored ?? preview;
   const inLibrary = Boolean(stored);
   const watched = stored?.watched ?? false;
+  const onWatchlist = (stored?.watchlist ?? false) && !watched;
 
   const imdbId = movie?.imdbId;
   useEffect(() => {
@@ -78,6 +80,11 @@ export function MovieDetail() {
     const next = !watched;
     await setMovieWatched(stored ?? movie, next);
     if (next) celebrate('small');
+  }
+
+  async function toggleWatchlist() {
+    if (!movie) return;
+    await setMovieWatchlist(stored ?? movie, !onWatchlist);
   }
 
   return (
@@ -145,6 +152,16 @@ export function MovieDetail() {
             {watched ? <Check size={17} strokeWidth={2} /> : null}
             {watched ? t('movie.watched') : t('movie.mark_watched')}
           </button>
+          {!watched && (
+            <button
+              onClick={toggleWatchlist}
+              className={onWatchlist ? 'btn-ghost text-gold' : 'btn-ghost'}
+              aria-pressed={onWatchlist}
+            >
+              <Bookmark size={16} strokeWidth={2} fill={onWatchlist ? 'currentColor' : 'none'} />
+              {onWatchlist ? t('movie.on_watchlist') : t('movie.add_watchlist')}
+            </button>
+          )}
           {!inLibrary && (
             <button className="btn-ghost" onClick={() => addMovie({ ...movie, watched: false })}>
               <Plus size={17} strokeWidth={2} />

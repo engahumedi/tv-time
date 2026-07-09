@@ -8,6 +8,48 @@ export interface Stats {
   perMonth: { month: string; label: string; count: number }[];
   topGenres: { genre: string; count: number }[];
   topShows: { show: Show; count: number; minutes: number }[];
+  /** Episodes watched per weekday, index 0 = Sunday … 6 = Saturday. */
+  perWeekday: { weekday: number; count: number }[];
+  /** Consecutive-day watch streak ending today (or yesterday), in days. */
+  currentStreak: number;
+  /** The longest consecutive-day watch streak ever, in days. */
+  longestStreak: number;
+  /** Average of all episode star ratings the user gave (0 when none rated). */
+  averageRating: number;
+  /** How many episodes carry a star rating. */
+  ratedEpisodes: number;
+  /** Share of watched shows that are finished, 0..1. */
+  completionRate: number;
+}
+
+/** Local midnight (ms) for a timestamp — the "day bucket" a watch falls in. */
+function dayIndex(ts: number): number {
+  const d = new Date(ts);
+  return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5);
+}
+
+/** Longest and current consecutive-day streaks from a set of watched days. */
+function computeStreaks(days: Set<number>): { current: number; longest: number } {
+  if (days.size === 0) return { current: 0, longest: 0 };
+  const sorted = [...days].sort((a, b) => a - b);
+  let longest = 1;
+  let run = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    run = sorted[i] === sorted[i - 1] + 1 ? run + 1 : 1;
+    if (run > longest) longest = run;
+  }
+  // Current streak counts back from today (or yesterday, so a late-night gap
+  // doesn't instantly break a streak the moment the clock rolls over).
+  const today = dayIndex(Date.now());
+  let current = 0;
+  if (days.has(today) || days.has(today - 1)) {
+    let cursor = days.has(today) ? today : today - 1;
+    while (days.has(cursor)) {
+      current++;
+      cursor--;
+    }
+  }
+  return { current, longest };
 }
 
 /** Break a minute total into days / hours / minutes for display. */
@@ -89,6 +131,26 @@ export function computeStats(
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
+  // Episodes per weekday + distinct watched days (for streaks).
+  const weekdayCounts = new Array(7).fill(0) as number[];
+  const watchedDays = new Set<number>();
+  let ratingSum = 0;
+  let ratedEpisodes = 0;
+  for (const w of watches) {
+    const d = new Date(w.watchedAt);
+    if (Number.isNaN(d.getTime())) continue;
+    weekdayCounts[d.getDay()]++;
+    watchedDays.add(dayIndex(w.watchedAt));
+    if (w.rating && w.rating > 0) {
+      ratingSum += w.rating;
+      ratedEpisodes++;
+    }
+  }
+  const perWeekday = weekdayCounts.map((count, weekday) => ({ weekday, count }));
+  const { current: currentStreak, longest: longestStreak } = computeStreaks(watchedDays);
+  const averageRating = ratedEpisodes ? ratingSum / ratedEpisodes : 0;
+  const completionRate = totalShows ? finishedShows / totalShows : 0;
+
   return {
     totalMinutes,
     totalEpisodes,
@@ -97,6 +159,12 @@ export function computeStats(
     perMonth,
     topGenres,
     topShows,
+    perWeekday,
+    currentStreak,
+    longestStreak,
+    averageRating,
+    ratedEpisodes,
+    completionRate,
   };
 }
 

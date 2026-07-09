@@ -76,6 +76,55 @@ describe('computeStats', () => {
   });
 });
 
+describe('computeStats — deeper metrics', () => {
+  const DAY = 864e5;
+  const dayStart = (offset: number) => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - offset * DAY;
+  };
+
+  it('computes current and longest streaks from distinct watched days', () => {
+    const shows = [show(1, 'A', [])];
+    // Watched today, yesterday, 2 days ago => current streak 3.
+    const watches = [
+      watch(1, 1, 1, 30, dayStart(0)),
+      watch(1, 1, 2, 30, dayStart(1)),
+      watch(1, 1, 3, 30, dayStart(2)),
+      // An older isolated 2-day run (should not extend current streak).
+      watch(1, 1, 4, 30, dayStart(10)),
+      watch(1, 1, 5, 30, dayStart(11)),
+    ];
+    const s = computeStats(shows, watches);
+    expect(s.currentStreak).toBe(3);
+    expect(s.longestStreak).toBe(3);
+  });
+
+  it('averages only rated episodes', () => {
+    const shows = [show(1, 'A', [])];
+    const watches = [
+      { ...watch(1, 1, 1, 30, dayStart(0)), rating: 4 },
+      { ...watch(1, 1, 2, 30, dayStart(0)), rating: 2 },
+      watch(1, 1, 3, 30, dayStart(0)), // unrated — ignored
+    ];
+    const s = computeStats(shows, watches);
+    expect(s.ratedEpisodes).toBe(2);
+    expect(s.averageRating).toBe(3);
+  });
+
+  it('buckets episodes by weekday and reports completion rate', () => {
+    const shows = [
+      { ...show(1, 'A', []), status: 'finished' as const },
+      { ...show(2, 'B', []), status: 'watching' as const },
+    ];
+    const watches = [watch(1, 1, 1, 30, dayStart(0)), watch(2, 1, 1, 30, dayStart(0))];
+    const s = computeStats(shows, watches);
+    expect(s.perWeekday).toHaveLength(7);
+    expect(s.perWeekday.reduce((a, d) => a + d.count, 0)).toBe(2);
+    // One of two watched shows is finished.
+    expect(s.completionRate).toBeCloseTo(0.5);
+  });
+});
+
 describe('computeBadges', () => {
   it('earns first-steps after one episode and reports progress', () => {
     const stats = computeStats(

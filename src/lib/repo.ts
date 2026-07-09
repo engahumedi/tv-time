@@ -190,6 +190,20 @@ export async function toggleShowInList(
   void cloudUpsertList(l);
 }
 
+/** Add several items to a list at once (no-op for ids already present). */
+export async function addItemsToList(
+  id: string,
+  itemIds: number[],
+): Promise<void> {
+  const l = await db.lists.get(id);
+  if (!l) return;
+  const set = new Set(l.showIds);
+  for (const itemId of itemIds) set.add(itemId);
+  l.showIds = [...set];
+  await db.lists.put(l);
+  void cloudUpsertList(l);
+}
+
 /** Mark a single episode watched. Idempotent — same episode never duplicates. */
 export async function markWatched(
   ep: Episode,
@@ -374,7 +388,29 @@ export async function setMovieWatched(
   const next: Movie = {
     ...base,
     watched,
+    // Watching a movie clears it from the "want to watch" queue.
+    watchlist: watched ? undefined : base.watchlist,
     watchedAt: watched ? base.watchedAt ?? Date.now() : undefined,
+  };
+  await db.movies.put(next);
+  void cloudUpsertMovie(next);
+}
+
+/**
+ * Add / remove a movie from the "want to watch" list (adds it to the library
+ * if needed). Watched movies can't sit on the watchlist.
+ */
+export async function setMovieWatchlist(
+  movie: Movie,
+  watchlist: boolean,
+): Promise<void> {
+  const existing = await db.movies.get(movie.id);
+  const base = existing ?? movie;
+  const next: Movie = {
+    ...base,
+    watchlist: watchlist || undefined,
+    watched: watchlist ? false : base.watched,
+    watchedAt: watchlist ? undefined : base.watchedAt,
   };
   await db.movies.put(next);
   void cloudUpsertMovie(next);
