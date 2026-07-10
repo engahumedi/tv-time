@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -42,6 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false);
   const [recovery, setRecovery] = useState(false);
 
+  // De-duped sync so a returning session and a fresh SIGNED_IN don't run it twice.
+  const syncingRef = useRef(false);
+  async function runSync() {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    setSyncing(true);
+    try {
+      await syncAfterLogin();
+    } finally {
+      setSyncing(false);
+      syncingRef.current = false;
+    }
+  }
+
   useEffect(() => {
     if (!supabase) return;
     let mounted = true;
@@ -52,6 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u);
       setCloudUser(u?.id ?? null);
       setReady(true);
+      // Existing session on app open: pull the account's latest data down so
+      // watches/shows added on another device (or session) show up here.
+      // Without this, sync only ran on a fresh SIGNED_IN and returning users
+      // saw stale local data (e.g. imported episodes appearing unwatched).
+      if (u) void runSync();
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -60,20 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCloudUser(u?.id ?? null);
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
       // Merge local <-> cloud when a real session becomes active.
-      if (u && event === 'SIGNED_IN') {
-        setSyncing(true);
-        try {
-          await syncAfterLogin();
-        } finally {
-          setSyncing(false);
-        }
-      }
+      if (u && event === 'SIGNED_IN') void runSync();
     });
 
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function signUp(email: string, password: string) {
