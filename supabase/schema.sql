@@ -105,7 +105,10 @@ create table if not exists public.follows (
 
 create index if not exists follows_following_idx on public.follows (following_id);
 create index if not exists follows_follower_idx  on public.follows (follower_id);
-create index if not exists profiles_username_idx on public.profiles (lower(username));
+-- Case-insensitive uniqueness on username (also serves case-insensitive
+-- lookups). The DB enforces this regardless of client normalization, so
+-- "Bob" and "bob" can never coexist even via a raw API call.
+create unique index if not exists profiles_username_lower_uniq on public.profiles (lower(username));
 
 -- Can the current user view `target`'s data? own / public / accepted follower.
 create or replace function public.can_view(target uuid)
