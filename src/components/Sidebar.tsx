@@ -1,6 +1,6 @@
 import { NavLink, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { NAV_ITEMS, LISTS_ITEM, SETTINGS_ITEM, type NavItem } from './navItems';
+import { NAV_ITEMS, PEOPLE_ITEM, LISTS_ITEM, SETTINGS_ITEM, type NavItem } from './navItems';
 import { LanguageToggle } from './LanguageToggle';
 
 /** Persistent left navigation for tablet/desktop (hidden on mobile). */
@@ -9,6 +9,7 @@ export function Sidebar() {
   const items = [
     NAV_ITEMS[0],
     NAV_ITEMS[1],
+    PEOPLE_ITEM,
     LISTS_ITEM,
     NAV_ITEMS[2],
     SETTINGS_ITEM,

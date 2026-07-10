@@ -37,6 +37,18 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+export const PEOPLE_ITEM: NavItem = {
+  to: '/people',
+  key: 'people',
+  icon: (
+    <>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 20c0-3.3 2.8-5 5.5-5s5.5 1.7 5.5 5" />
+      <path d="M16 5.2a3.2 3.2 0 0 1 0 5.9M17.5 20c0-3-1.4-4.5-3-5" />
+    </>
+  ),
+};
+
 export const CALENDAR_ITEM: NavItem = {
   to: '/calendar',
   key: 'calendar',

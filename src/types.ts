@@ -117,6 +117,15 @@ export interface ShowList {
 
 export type Language = 'en' | 'ar';
 
+/** A public-facing user profile (for search / friend viewing). */
+export interface Profile {
+  id: string;
+  username: string;
+  displayName: string;
+  isPublic: boolean;
+  avatarUrl?: string | null;
+}
+
 /** A row of raw watch data parsed out of a TV Time export, before matching. */
 export interface ParsedWatch {
   seriesName: string;

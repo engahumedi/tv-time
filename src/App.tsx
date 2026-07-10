@@ -28,6 +28,12 @@ const Lists = lazy(() =>
 const Library = lazy(() =>
   import('./pages/Library').then((m) => ({ default: m.Library })),
 );
+const People = lazy(() =>
+  import('./pages/People').then((m) => ({ default: m.People })),
+);
+const UserProfile = lazy(() =>
+  import('./pages/UserProfile').then((m) => ({ default: m.UserProfile })),
+);
 const Wrapped = lazy(() =>
   import('./pages/Wrapped').then((m) => ({ default: m.Wrapped })),
 );
@@ -107,6 +113,22 @@ export default function App() {
           element={
             <Suspense fallback={<Spinner />}>
               <Library />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/people"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <People />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/u/:id"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <UserProfile />
             </Suspense>
           }
         />
