@@ -330,6 +330,17 @@ export async function uploadAvatar(file: File): Promise<{ url?: string; error?: 
   return { url };
 }
 
+/** Set the avatar to a ready-made image URL (preset), no upload needed. */
+export async function setAvatarFromUrl(url: string): Promise<{ error?: string }> {
+  if (!supabase) return { error: 'generic' };
+  const uid = await myId();
+  if (!uid) return { error: 'generic' };
+  const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', uid);
+  if (error) return { error: 'generic' };
+  emitChanged();
+  return {};
+}
+
 /** Follower/following counts for a user (public info, via SECURITY DEFINER fn). */
 export async function followCounts(id: string): Promise<{ followers: number; following: number }> {
   if (!supabase) return { followers: 0, following: 0 };

@@ -7,9 +7,10 @@ import { LanguageToggle } from '../components/LanguageToggle';
 import { AccountCard } from '../components/AccountCard';
 import { exportData, exportWatchesCsv, triggerDownload } from '../lib/exporter';
 import { clearAll } from '../lib/repo';
-import { getMyProfile, saveMyProfile, normalizeUsername, uploadAvatar } from '../lib/social';
+import { getMyProfile, saveMyProfile, normalizeUsername, uploadAvatar, setAvatarFromUrl } from '../lib/social';
 import { Avatar } from './People';
 import { AvatarCropModal } from '../components/AvatarCropModal';
+import { PresetAvatarModal } from '../components/PresetAvatarModal';
 import { useAuth } from '../lib/auth';
 
 export function Settings() {
@@ -42,6 +43,7 @@ export function Settings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
+  const [showPresets, setShowPresets] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -76,6 +78,16 @@ export function Settings() {
     setAvatarBusy(false);
     if (res.error) setProfErr(t('settings.avatar_error'));
     else if (res.url) setAvatarUrl(res.url);
+  }
+
+  async function onPickPreset(url: string) {
+    setShowPresets(false);
+    setProfErr('');
+    setAvatarBusy(true);
+    const res = await setAvatarFromUrl(url);
+    setAvatarBusy(false);
+    if (res.error) setProfErr(t('settings.avatar_error'));
+    else setAvatarUrl(url);
   }
 
   // Change-password form (only when signed in).
@@ -215,9 +227,14 @@ export function Settings() {
                 </span>
               </button>
               <div>
-                <button type="button" onClick={() => fileRef.current?.click()} disabled={avatarBusy} className="btn-ghost text-sm">
-                  {avatarBusy ? t('auth.working') : t('settings.change_avatar')}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={avatarBusy} className="btn-ghost text-sm">
+                    {avatarBusy ? t('auth.working') : t('settings.change_avatar')}
+                  </button>
+                  <button type="button" onClick={() => setShowPresets(true)} disabled={avatarBusy} className="btn-ghost text-sm">
+                    {t('settings.preset_cta')}
+                  </button>
+                </div>
                 <p className="mt-1 text-xs text-faint">{t('settings.avatar_hint')}</p>
               </div>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
@@ -372,6 +389,9 @@ export function Settings() {
 
       {cropFile && (
         <AvatarCropModal file={cropFile} onCancel={() => setCropFile(null)} onCropped={onCropped} />
+      )}
+      {showPresets && (
+        <PresetAvatarModal onCancel={() => setShowPresets(false)} onPick={onPickPreset} />
       )}
     </div>
   );
