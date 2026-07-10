@@ -37,6 +37,7 @@ import { useAuth } from '../lib/auth';
 import { ShowCard } from '../components/ShowCard';
 import { MovieCard } from '../components/MovieCard';
 import { NewListModal } from '../components/NewListModal';
+import { FollowStats } from '../components/FollowStats';
 
 const GOLD = '#c9a24b';
 const GOLD_DIM = 'rgba(201,162,75,0.32)';
@@ -109,6 +110,7 @@ export function Profile() {
           </div>
           <div className="pb-1">
             <h1 className="text-2xl font-semibold leading-tight">{name}</h1>
+            {user && <div className="mt-1"><FollowStats userId={user.id} /></div>}
             <Link to="/settings" className="text-sm text-gold hover:underline">
               {t('settings.title')}
             </Link>

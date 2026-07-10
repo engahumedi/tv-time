@@ -152,6 +152,40 @@ export async function incomingRequests(): Promise<Profile[]> {
   return (profs ?? []).map((r) => toProfile(r as ProfileRow));
 }
 
+export interface FollowEvent {
+  profile: Profile;
+  ts: number;
+  /** pending = they requested to follow you; accepted = they now follow you. */
+  pending: boolean;
+}
+
+/** Everyone who follows (or asked to follow) me, with when it happened. */
+export async function followerActivity(): Promise<FollowEvent[]> {
+  if (!supabase) return [];
+  const uid = await myId();
+  if (!uid) return [];
+  const { data: rows } = await supabase
+    .from('follows')
+    .select('follower_id, status, created_at')
+    .eq('following_id', uid);
+  const list = rows ?? [];
+  if (list.length === 0) return [];
+  const ids = list.map((r) => r.follower_id as string);
+  const { data: profs } = await supabase.from('profiles').select('*').in('id', ids);
+  const byId = new Map((profs ?? []).map((p) => [p.id as string, toProfile(p as ProfileRow)]));
+  return list
+    .map((r) => {
+      const profile = byId.get(r.follower_id as string);
+      if (!profile) return null;
+      return {
+        profile,
+        ts: Number(r.created_at ?? 0),
+        pending: (r.status as string) !== 'accepted',
+      };
+    })
+    .filter((x): x is FollowEvent => x !== null);
+}
+
 export async function acceptRequest(followerId: string): Promise<void> {
   if (!supabase) return;
   const uid = await myId();
@@ -164,6 +198,24 @@ export async function rejectRequest(followerId: string): Promise<void> {
   const uid = await myId();
   if (!uid) return;
   await supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', uid);
+}
+
+/** Follower/following counts for a user (public info, via SECURITY DEFINER fn). */
+export async function followCounts(id: string): Promise<{ followers: number; following: number }> {
+  if (!supabase) return { followers: 0, following: 0 };
+  const { data } = await supabase.rpc('follow_counts', { target: id });
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    followers: Number(row?.followers ?? 0),
+    following: Number(row?.following ?? 0),
+  };
+}
+
+/** The list of a user's followers or following (privacy-gated server-side). */
+export async function followList(id: string, kind: 'followers' | 'following'): Promise<Profile[]> {
+  if (!supabase) return [];
+  const { data } = await supabase.rpc('follow_list', { target: id, kind });
+  return (data ?? []).map((r: ProfileRow) => toProfile(r));
 }
 
 export interface FriendData {

@@ -17,6 +17,7 @@ import { formatNumber } from '../lib/format';
 import { ShowCard } from '../components/ShowCard';
 import { MovieCard } from '../components/MovieCard';
 import { Avatar } from './People';
+import { FollowStats } from '../components/FollowStats';
 import type { Profile } from '../types';
 
 export function UserProfile() {
@@ -92,6 +93,7 @@ export function UserProfile() {
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-semibold leading-tight">{profile.displayName}</h1>
           <p className="truncate text-sm text-faint">@{profile.username}</p>
+          <div className="mt-1.5"><FollowStats userId={id} /></div>
           <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted">
             {profile.isPublic ? t('people.public') : (<><Lock size={11} strokeWidth={2} /> {t('people.private')}</>)}
           </span>

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { BottomNav } from './BottomNav';
 import { Sidebar, Logo } from './Sidebar';
 import { LanguageToggle } from './LanguageToggle';
+import { NotificationsBell } from './NotificationsBell';
 import { resetConfetti } from '../lib/celebrate';
 
 /**
@@ -33,6 +34,7 @@ export function Layout() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <NotificationsBell />
           <Link
             to="/settings"
             className="grid h-9 w-9 place-items-center rounded-lg border border-overlay/[0.08] bg-overlay/[0.04] text-fg"

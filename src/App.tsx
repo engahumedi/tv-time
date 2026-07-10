@@ -40,6 +40,9 @@ const Wrapped = lazy(() =>
 const Settings = lazy(() =>
   import('./pages/Settings').then((m) => ({ default: m.Settings })),
 );
+const Notifications = lazy(() =>
+  import('./pages/Notifications').then((m) => ({ default: m.Notifications })),
+);
 
 function Spinner() {
   return (
@@ -145,6 +148,14 @@ export default function App() {
           element={
             <Suspense fallback={<Spinner />}>
               <Settings />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <Notifications />
             </Suspense>
           }
         />

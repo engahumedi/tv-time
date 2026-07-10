@@ -31,6 +31,18 @@ export const ar: Translation = {
     locked_body: 'تابِع هذا الحساب — بمجرد قبوله ترى ملفه.',
     locked_pending: 'طلب متابعتك بانتظار موافقته.',
     nothing_yet: 'لا شيء هنا بعد.',
+    followers: 'المتابِعون',
+    no_connections: 'لا أحد هنا بعد.',
+  },
+  notifications: {
+    title: 'التنبيهات',
+    empty_title: 'لا توجد تنبيهات',
+    empty_body: 'نشاط المتابعة والحلقات الجديدة من المسلسلات التي تتابعها تظهر هنا.',
+    new_episode: 'نزلت له حلقة جديدة',
+    episode_label: 'م{{s}}·ح{{e}}',
+    requested_follow: 'طلب متابعتك',
+    started_following: 'بدأ بمتابعتك',
+    just_now: 'الآن',
   },
   common: {
     add: 'أضِف',

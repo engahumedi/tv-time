@@ -2,6 +2,7 @@ import { NavLink, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { NAV_ITEMS, PEOPLE_ITEM, LISTS_ITEM, SETTINGS_ITEM, type NavItem } from './navItems';
 import { LanguageToggle } from './LanguageToggle';
+import { NotificationsBell } from './NotificationsBell';
 
 /** Persistent left navigation for tablet/desktop (hidden on mobile). */
 export function Sidebar() {
@@ -17,12 +18,15 @@ export function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-overlay/[0.07] bg-navy-900 px-4 py-6 lg:flex">
-      <Link to="/" className="mb-8 flex items-center gap-2.5 px-2">
-        <Logo />
-        <span className="text-xl font-bold tracking-tight">
-          {t('app.name')}
-        </span>
-      </Link>
+      <div className="mb-8 flex items-center justify-between px-2">
+        <Link to="/" className="flex items-center gap-2.5">
+          <Logo />
+          <span className="text-xl font-bold tracking-tight">
+            {t('app.name')}
+          </span>
+        </Link>
+        <NotificationsBell />
+      </div>
 
       <nav className="flex flex-col gap-1">
         {items.map((item) => (

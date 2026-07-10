@@ -198,3 +198,28 @@ drop policy if exists "view lists" on public.lists;
 create policy "view lists" on public.lists for select using (public.can_view(user_id));
 drop policy if exists "view movies" on public.movies;
 create policy "view movies" on public.movies for select using (public.can_view(user_id));
+
+-- Follower/following counts (public) + member lists (privacy-gated via can_view).
+
+create or replace function public.follow_counts(target uuid)
+returns table(followers integer, following integer)
+language sql security definer stable set search_path = public as $$
+  select
+    (select count(*) from public.follows where following_id = target and status = 'accepted')::int,
+    (select count(*) from public.follows where follower_id  = target and status = 'accepted')::int;
+$$;
+
+create or replace function public.follow_list(target uuid, kind text)
+returns setof public.profiles
+language sql security definer stable set search_path = public as $$
+  select p.* from public.profiles p
+  where public.can_view(target)
+    and (
+      (kind = 'followers' and p.id in (select follower_id  from public.follows where following_id = target and status = 'accepted'))
+      or
+      (kind = 'following' and p.id in (select following_id from public.follows where follower_id  = target and status = 'accepted'))
+    );
+$$;
+
+grant execute on function public.follow_counts(uuid) to authenticated, anon;
+grant execute on function public.follow_list(uuid, text) to authenticated, anon;

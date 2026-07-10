@@ -29,6 +29,18 @@ export const en = {
     locked_body: 'Follow this account — once they accept, you’ll see their profile.',
     locked_pending: 'Your follow request is pending their approval.',
     nothing_yet: 'Nothing here yet.',
+    followers: 'Followers',
+    no_connections: 'No one here yet.',
+  },
+  notifications: {
+    title: 'Notifications',
+    empty_title: 'No notifications',
+    empty_body: 'Follow activity and new episodes from shows you track will show up here.',
+    new_episode: 'has a new episode',
+    episode_label: 'S{{s}}·E{{e}}',
+    requested_follow: 'asked to follow you',
+    started_following: 'started following you',
+    just_now: 'just now',
   },
   common: {
     add: 'Add',
