@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { followCounts } from '../lib/social';
+import { followCounts, onSocialChanged } from '../lib/social';
 import { formatNumber } from '../lib/format';
 import { ConnectionsModal } from './ConnectionsModal';
 
@@ -8,7 +8,7 @@ import { ConnectionsModal } from './ConnectionsModal';
  * Followers / following counts for a user, rendered as two tappable pills.
  * Tapping one opens the connections list (privacy-gated server-side).
  */
-export function FollowStats({ userId }: { userId: string }) {
+export function FollowStats({ userId, isMe = false }: { userId: string; isMe?: boolean }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [counts, setCounts] = useState<{ followers: number; following: number } | null>(null);
@@ -16,11 +16,12 @@ export function FollowStats({ userId }: { userId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    followCounts(userId)
-      .then((c) => !cancelled && setCounts(c))
-      .catch(() => {});
+    const load = () => followCounts(userId).then((c) => !cancelled && setCounts(c)).catch(() => {});
+    load();
+    const off = onSocialChanged(load);
     return () => {
       cancelled = true;
+      off();
     };
   }, [userId]);
 
@@ -45,7 +46,7 @@ export function FollowStats({ userId }: { userId: string }) {
       </div>
 
       {open && (
-        <ConnectionsModal userId={userId} initialKind={open} onClose={() => setOpen(null)} />
+        <ConnectionsModal userId={userId} initialKind={open} isMe={isMe} onClose={() => setOpen(null)} />
       )}
     </>
   );

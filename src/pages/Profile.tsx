@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -38,6 +38,7 @@ import { ShowCard } from '../components/ShowCard';
 import { MovieCard } from '../components/MovieCard';
 import { NewListModal } from '../components/NewListModal';
 import { FollowStats } from '../components/FollowStats';
+import { getMyProfile } from '../lib/social';
 
 const GOLD = '#c9a24b';
 const GOLD_DIM = 'rgba(201,162,75,0.32)';
@@ -69,6 +70,12 @@ export function Profile() {
   );
   const badges = useMemo(() => (stats ? computeBadges(stats) : []), [stats]);
   const [creatingList, setCreatingList] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    getMyProfile().then((p) => setAvatarUrl(p?.avatarUrl ?? null)).catch(() => {});
+  }, [user]);
 
   if (!stats || !shows) {
     return <div className="pt-16 text-center text-faint">{t('common.loading')}</div>;
@@ -105,12 +112,16 @@ export function Profile() {
       <div className="relative z-10 mx-auto max-w-4xl px-4 lg:px-10">
         {/* Avatar + name */}
         <div className="-mt-10 mb-8 flex items-end gap-4">
-          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border-4 border-navy-950 bg-navy-700 font-display text-3xl text-muted">
-            {name.charAt(0).toUpperCase()}
-          </div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="h-20 w-20 shrink-0 rounded-full border-4 border-navy-950 object-cover" />
+          ) : (
+            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border-4 border-navy-950 bg-navy-700 font-display text-3xl text-muted">
+              {name.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="pb-1">
             <h1 className="text-2xl font-semibold leading-tight">{name}</h1>
-            {user && <div className="mt-1"><FollowStats userId={user.id} /></div>}
+            {user && <div className="mt-1"><FollowStats userId={user.id} isMe /></div>}
             <Link to="/settings" className="text-sm text-gold hover:underline">
               {t('settings.title')}
             </Link>

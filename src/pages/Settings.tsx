@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Lock, Globe } from 'lucide-react';
+import { Lock, Globe, Camera } from 'lucide-react';
 import { getTheme, setTheme, getDisplayName, setDisplayName, type Theme } from '../lib/settings';
 import { LanguageToggle } from '../components/LanguageToggle';
 import { AccountCard } from '../components/AccountCard';
 import { exportData, exportWatchesCsv, triggerDownload } from '../lib/exporter';
 import { clearAll } from '../lib/repo';
-import { getMyProfile, saveMyProfile, normalizeUsername } from '../lib/social';
+import { getMyProfile, saveMyProfile, normalizeUsername, uploadAvatar } from '../lib/social';
+import { Avatar } from './People';
 import { useAuth } from '../lib/auth';
 
 export function Settings() {
@@ -21,6 +22,9 @@ export function Settings() {
   const [username, setUsername] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [profErr, setProfErr] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -30,9 +34,26 @@ export function Settings() {
         setUsername(p.username);
         setIsPublic(p.isPublic);
         setName((n) => n || p.displayName);
+        setAvatarUrl(p.avatarUrl ?? null);
       })
       .catch(() => {});
   }, [user]);
+
+  async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setProfErr(t('settings.avatar_too_big'));
+      return;
+    }
+    setProfErr('');
+    setAvatarBusy(true);
+    const res = await uploadAvatar(file);
+    setAvatarBusy(false);
+    if (res.error) setProfErr(t('settings.avatar_error'));
+    else if (res.url) setAvatarUrl(res.url);
+  }
 
   // Change-password form (only when signed in).
   const [pw, setPw] = useState('');
@@ -136,6 +157,29 @@ export function Settings() {
 
         {user && (
           <>
+            {/* Avatar */}
+            <div className="mt-4 flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={avatarBusy}
+                className="group relative shrink-0 rounded-full"
+                aria-label={t('settings.change_avatar')}
+              >
+                <Avatar name={name} url={avatarUrl} size={64} />
+                <span className="absolute inset-0 grid place-items-center rounded-full bg-navy-950/50 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Camera size={20} strokeWidth={1.75} className="text-fg" />
+                </span>
+              </button>
+              <div>
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={avatarBusy} className="btn-ghost text-sm">
+                  {avatarBusy ? t('auth.working') : t('settings.change_avatar')}
+                </button>
+                <p className="mt-1 text-xs text-faint">{t('settings.avatar_hint')}</p>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+            </div>
+
             <label className="mt-4 block text-sm font-semibold">{t('settings.username')}</label>
             <div className="mt-1.5 flex items-center gap-2">
               <span className="text-muted">@</span>

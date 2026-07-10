@@ -223,3 +223,114 @@ $$;
 
 grant execute on function public.follow_counts(uuid) to authenticated, anon;
 grant execute on function public.follow_list(uuid, text) to authenticated, anon;
+-- ============================================================
+-- Social layer v3: accepted_at, blocks, notif seen, avatars
+-- ============================================================
+
+-- 1) accepted_at on follows: set ONLY when a pending request is approved
+--    (public auto-accepts leave it null), so we can notify "X accepted you".
+alter table public.follows add column if not exists accepted_at bigint;
+
+-- Recreate set_follow_status: reject follows between blocked users, auto-accept
+-- public targets (accepted_at stays null → not a manual approval), else pending.
+create or replace function public.set_follow_status()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if exists (
+    select 1 from public.blocks b
+    where (b.blocker_id = new.following_id and b.blocked_id = new.follower_id)
+       or (b.blocker_id = new.follower_id and b.blocked_id = new.following_id)
+  ) then
+    raise exception 'blocked';
+  end if;
+  if exists (select 1 from public.profiles where id = new.following_id and is_public) then
+    new.status := 'accepted';
+  else
+    new.status := 'pending';
+  end if;
+  new.created_at := (extract(epoch from now()) * 1000)::bigint;
+  return new;
+end;
+$$;
+
+-- Stamp accepted_at the moment a pending follow flips to accepted.
+create or replace function public.mark_follow_accepted()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'accepted' and coalesce(old.status, '') <> 'accepted' then
+    new.accepted_at := (extract(epoch from now()) * 1000)::bigint;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists follows_mark_accepted on public.follows;
+create trigger follows_mark_accepted before update on public.follows
+  for each row execute function public.mark_follow_accepted();
+
+-- 2) Blocks.
+create table if not exists public.blocks (
+  blocker_id uuid not null references auth.users (id) on delete cascade,
+  blocked_id uuid not null references auth.users (id) on delete cascade,
+  created_at bigint not null default 0,
+  primary key (blocker_id, blocked_id),
+  check (blocker_id <> blocked_id)
+);
+alter table public.blocks enable row level security;
+drop policy if exists "own blocks read" on public.blocks;
+create policy "own blocks read" on public.blocks for select using (blocker_id = auth.uid());
+drop policy if exists "create own block" on public.blocks;
+create policy "create own block" on public.blocks for insert with check (blocker_id = auth.uid());
+drop policy if exists "delete own block" on public.blocks;
+create policy "delete own block" on public.blocks for delete using (blocker_id = auth.uid());
+
+-- Blocking someone severs any follow relationship both ways.
+create or replace function public.sever_on_block()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.follows
+  where (follower_id = new.blocker_id and following_id = new.blocked_id)
+     or (follower_id = new.blocked_id and following_id = new.blocker_id);
+  return new;
+end;
+$$;
+drop trigger if exists blocks_sever on public.blocks;
+create trigger blocks_sever after insert on public.blocks
+  for each row execute function public.sever_on_block();
+
+-- 3) can_view now also denies when either party has blocked the other.
+create or replace function public.can_view(target uuid)
+returns boolean language sql security definer stable set search_path = public as $$
+  select
+    not exists (
+      select 1 from public.blocks b
+      where (b.blocker_id = target and b.blocked_id = auth.uid())
+         or (b.blocker_id = auth.uid() and b.blocked_id = target)
+    )
+    and (
+      target = auth.uid()
+      or exists (select 1 from public.profiles p where p.id = target and p.is_public)
+      or exists (select 1 from public.follows f
+                 where f.following_id = target and f.follower_id = auth.uid()
+                   and f.status = 'accepted')
+    );
+$$;
+
+-- 4) Cross-device "notifications seen" marker.
+alter table public.profiles add column if not exists notifs_seen_at bigint not null default 0;
+
+-- 5) Avatars storage bucket (public read, owner-only writes under {uid}/…).
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "avatar public read" on storage.objects;
+create policy "avatar public read" on storage.objects for select using (bucket_id = 'avatars');
+drop policy if exists "avatar owner insert" on storage.objects;
+create policy "avatar owner insert" on storage.objects for insert
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "avatar owner update" on storage.objects;
+create policy "avatar owner update" on storage.objects for update
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "avatar owner delete" on storage.objects;
+create policy "avatar owner delete" on storage.objects for delete
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);

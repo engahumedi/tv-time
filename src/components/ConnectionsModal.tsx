@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { X, Users } from 'lucide-react';
-import { followList } from '../lib/social';
+import { X, Users, UserMinus } from 'lucide-react';
+import { followList, removeFollower, onSocialChanged } from '../lib/social';
 import { Avatar } from '../pages/People';
 import { EmptyState } from './EmptyState';
 import type { Profile } from '../types';
@@ -12,14 +12,17 @@ import type { Profile } from '../types';
  * A tabbed followers / following list for a given user. The DB gates what's
  * actually returned (private accounts only expose the list to accepted
  * followers), so an empty list here can also mean "not allowed to see it".
+ * When it's my own profile, followers can be removed inline.
  */
 export function ConnectionsModal({
   userId,
   initialKind,
+  isMe = false,
   onClose,
 }: {
   userId: string;
   initialKind: 'followers' | 'following';
+  isMe?: boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -34,14 +37,24 @@ export function ConnectionsModal({
 
   useEffect(() => {
     let cancelled = false;
-    setPeople(null);
-    followList(userId, kind)
-      .then((p) => !cancelled && setPeople(p))
-      .catch(() => !cancelled && setPeople([]));
+    const load = () => {
+      setPeople(null);
+      followList(userId, kind)
+        .then((p) => !cancelled && setPeople(p))
+        .catch(() => !cancelled && setPeople([]));
+    };
+    load();
+    const off = onSocialChanged(load);
     return () => {
       cancelled = true;
+      off();
     };
   }, [userId, kind]);
+
+  async function remove(id: string) {
+    setPeople((list) => (list ? list.filter((p) => p.id !== id) : list));
+    await removeFollower(id);
+  }
 
   return (
     <div
@@ -61,9 +74,7 @@ export function ConnectionsModal({
                 key={k}
                 onClick={() => setKind(k)}
                 className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
-                  kind === k
-                    ? 'bg-gold/[0.12] text-gold'
-                    : 'text-muted hover:text-fg'
+                  kind === k ? 'bg-gold/[0.12] text-gold' : 'text-muted hover:text-fg'
                 }`}
               >
                 {t(`people.${k}`)}
@@ -87,18 +98,25 @@ export function ConnectionsModal({
           ) : (
             <div className="space-y-2">
               {people.map((p) => (
-                <Link
-                  key={p.id}
-                  to={`/u/${p.id}`}
-                  onClick={onClose}
-                  className="flex items-center gap-3 rounded-xl border border-overlay/[0.07] bg-navy-800 p-2.5 hover:bg-navy-700"
-                >
-                  <Avatar name={p.displayName} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{p.displayName}</p>
-                    <p className="truncate text-xs text-faint">@{p.username}</p>
-                  </div>
-                </Link>
+                <div key={p.id} className="flex items-center gap-3 rounded-xl border border-overlay/[0.07] bg-navy-800 p-2.5">
+                  <Link to={`/u/${p.id}`} onClick={onClose} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-90">
+                    <Avatar name={p.displayName} url={p.avatarUrl} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{p.displayName}</p>
+                      <p className="truncate text-xs text-faint">@{p.username}</p>
+                    </div>
+                  </Link>
+                  {isMe && kind === 'followers' && (
+                    <button
+                      onClick={() => remove(p.id)}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-overlay/10 text-muted hover:text-rose-300"
+                      aria-label={t('people.remove_follower')}
+                      title={t('people.remove_follower')}
+                    >
+                      <UserMinus size={16} strokeWidth={1.9} />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}

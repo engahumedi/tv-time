@@ -8,10 +8,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { db } from './db';
-import { followerActivity } from './social';
+import { followerActivity, acceptedFollows, getNotifsSeen, setNotifsSeen, onSocialChanged } from './social';
 import type { Profile } from '../types';
 
-export type NotifType = 'request' | 'follow' | 'episode';
+export type NotifType = 'request' | 'follow' | 'accepted' | 'episode';
 
 export interface Notif {
   id: string;
@@ -40,6 +40,8 @@ export function getLastSeen(): number {
 export function markAllSeen(ts: number = Date.now()): void {
   localStorage.setItem(SEEN_KEY, String(ts));
   window.dispatchEvent(new Event(SEEN_EVENT));
+  // Best-effort sync so the badge stays cleared across devices.
+  void setNotifsSeen(ts).catch(() => {});
 }
 
 /** Recently-aired, still-unwatched episodes from shows in the library. */
@@ -75,16 +77,23 @@ async function episodeNotifs(): Promise<Notif[]> {
   return out;
 }
 
-/** Follow requests + new followers from the cloud (empty when signed out). */
+/** Follow requests + new followers + accepted requests from the cloud. */
 async function followNotifs(): Promise<Notif[]> {
   try {
-    const events = await followerActivity();
-    return events.map((ev) => ({
+    const [incoming, accepted] = await Promise.all([followerActivity(), acceptedFollows()]);
+    const a: Notif[] = incoming.map((ev) => ({
       id: `${ev.pending ? 'req' : 'fol'}:${ev.profile.id}`,
       type: ev.pending ? 'request' : 'follow',
       ts: ev.ts,
       profile: ev.profile,
     }));
+    const b: Notif[] = accepted.map((ev) => ({
+      id: `acc:${ev.profile.id}`,
+      type: 'accepted' as const,
+      ts: ev.ts,
+      profile: ev.profile,
+    }));
+    return [...a, ...b];
   } catch {
     return [];
   }
@@ -106,15 +115,20 @@ export function useNotifications() {
 
   const refresh = useCallback(() => {
     loadNotifs().then(setNotifs).catch(() => setNotifs([]));
+    // Fold in the cross-device marker so a device that already opened the page
+    // doesn't re-show everything as unread here.
+    getNotifsSeen().then((remote) => remote && setLastSeen((l) => Math.max(l, remote))).catch(() => {});
   }, []);
 
   useEffect(() => {
     refresh();
     const onSeen = () => setLastSeen(getLastSeen());
     const onFocus = () => refresh();
+    const offSocial = onSocialChanged(refresh);
     window.addEventListener(SEEN_EVENT, onSeen);
     window.addEventListener('focus', onFocus);
     return () => {
+      offSocial();
       window.removeEventListener(SEEN_EVENT, onSeen);
       window.removeEventListener('focus', onFocus);
     };

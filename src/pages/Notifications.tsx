@@ -5,6 +5,7 @@ import { Bell, UserCheck, Check, X, Tv } from 'lucide-react';
 import { useNotifications, markAllSeen, type Notif } from '../lib/notifications';
 import { acceptRequest, rejectRequest } from '../lib/social';
 import { img } from '../lib/tmdb';
+import { timeAgo } from '../lib/format';
 import { EmptyState } from '../components/EmptyState';
 import { Avatar } from './People';
 
@@ -69,7 +70,7 @@ function NotifRow({
   onReject: () => void;
 }) {
   const { t } = useTranslation();
-  const when = relativeTime(n.ts, lang, t);
+  const when = timeAgo(n.ts, lang, t('notifications.just_now'));
 
   if (n.type === 'episode') {
     const poster = img(n.posterPath, 'w200');
@@ -101,15 +102,19 @@ function NotifRow({
   }
 
   const profile = n.profile!;
+  const label =
+    n.type === 'request' ? 'notifications.requested_follow'
+    : n.type === 'accepted' ? 'notifications.request_accepted'
+    : 'notifications.started_following';
   return (
     <div className="flex items-center gap-3 rounded-xl border border-overlay/[0.07] bg-navy-800 p-2.5">
       <Link to={`/u/${profile.id}`} className="shrink-0">
-        <Avatar name={profile.displayName} />
+        <Avatar name={profile.displayName} url={profile.avatarUrl} />
       </Link>
       <Link to={`/u/${profile.id}`} className="min-w-0 flex-1">
         <p className="truncate text-sm">
           <span className="font-semibold">{profile.displayName}</span>{' '}
-          {t(n.type === 'request' ? 'notifications.requested_follow' : 'notifications.started_following')}
+          {t(label)}
         </p>
         <p className="truncate text-xs text-faint">@{profile.username} · {when}</p>
       </Link>
@@ -129,18 +134,4 @@ function NotifRow({
       )}
     </div>
   );
-}
-
-/** A compact "3d ago" / "just now" relative time. */
-function relativeTime(ts: number, lang: string, t: (k: string, o?: Record<string, unknown>) => string): string {
-  if (!ts) return '';
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return t('notifications.just_now');
-  const rtf = new Intl.RelativeTimeFormat(lang === 'ar' ? 'ar' : 'en', { numeric: 'auto' });
-  if (mins < 60) return rtf.format(-mins, 'minute');
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return rtf.format(-hours, 'hour');
-  const days = Math.floor(hours / 24);
-  return rtf.format(-days, 'day');
 }

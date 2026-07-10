@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Lock, UserPlus, Clock3, Check } from 'lucide-react';
+import { Lock, UserPlus, Clock3, Check, Ban, ShieldOff } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import {
   getProfile,
@@ -9,6 +9,8 @@ import {
   getUserData,
   follow,
   unfollow,
+  block,
+  unblock,
   type FollowStatus,
   type FriendData,
 } from '../lib/social';
@@ -29,10 +31,11 @@ export function UserProfile() {
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [status, setStatus] = useState<FollowStatus>('none');
   const [targetPublic, setTargetPublic] = useState(false);
+  const [iBlocked, setIBlocked] = useState(false);
   const [data, setData] = useState<FriendData | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const canView = isMe || targetPublic || status === 'accepted';
+  const canView = !iBlocked && (isMe || targetPublic || status === 'accepted');
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +47,8 @@ export function UserProfile() {
       setProfile(p);
       setStatus(rel.status);
       setTargetPublic(rel.targetPublic);
-      if ((isMe || rel.targetPublic || rel.status === 'accepted') && p) {
+      setIBlocked(rel.iBlocked);
+      if (!rel.iBlocked && (isMe || rel.targetPublic || rel.status === 'accepted') && p) {
         const d = await getUserData(id);
         if (!cancelled) setData(d);
       }
@@ -53,6 +57,25 @@ export function UserProfile() {
       cancelled = true;
     };
   }, [id, isMe]);
+
+  async function toggleBlock() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (iBlocked) {
+        await unblock(id);
+        setIBlocked(false);
+      } else {
+        if (!confirm(t('people.block_confirm'))) return;
+        await block(id);
+        setIBlocked(true);
+        setStatus('none');
+        setData(null);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function toggleFollow() {
     if (busy) return;
@@ -89,7 +112,7 @@ export function UserProfile() {
     <div className="mx-auto max-w-4xl pt-2">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
-        <Avatar name={profile.displayName} size={72} />
+        <Avatar name={profile.displayName} url={profile.avatarUrl} size={72} />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-semibold leading-tight">{profile.displayName}</h1>
           <p className="truncate text-sm text-faint">@{profile.username}</p>
@@ -98,11 +121,30 @@ export function UserProfile() {
             {profile.isPublic ? t('people.public') : (<><Lock size={11} strokeWidth={2} /> {t('people.private')}</>)}
           </span>
         </div>
-        {!isMe && <FollowButton status={status} busy={busy} onClick={toggleFollow} />}
+        {!isMe && !iBlocked && <FollowButton status={status} busy={busy} onClick={toggleFollow} />}
       </div>
 
-      {/* Locked */}
-      {!canView ? (
+      {/* Block / unblock */}
+      {!isMe && (
+        <div className="mb-6 -mt-2">
+          <button
+            onClick={toggleBlock}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-rose-300"
+          >
+            {iBlocked ? (<><ShieldOff size={14} strokeWidth={1.9} /> {t('people.unblock')}</>) : (<><Ban size={14} strokeWidth={1.9} /> {t('people.block')}</>)}
+          </button>
+        </div>
+      )}
+
+      {/* Blocked */}
+      {iBlocked ? (
+        <div className="rounded-2xl border border-overlay/[0.08] bg-navy-800 p-8 text-center">
+          <Ban size={26} strokeWidth={1.5} className="mx-auto mb-3 text-muted" />
+          <p className="font-semibold">{t('people.blocked_title')}</p>
+          <p className="mt-1 text-sm text-muted">{t('people.blocked_body')}</p>
+        </div>
+      ) : !canView ? (
         <div className="rounded-2xl border border-overlay/[0.08] bg-navy-800 p-8 text-center">
           <Lock size={26} strokeWidth={1.5} className="mx-auto mb-3 text-muted" />
           <p className="font-semibold">{t('people.locked_title')}</p>

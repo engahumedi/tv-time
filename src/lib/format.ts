@@ -29,3 +29,19 @@ export function formatDate(iso: string | number | null, lang: string): string {
 export function formatNumber(n: number, lang: string): string {
   return n.toLocaleString(lang === 'ar' ? 'ar-EG' : undefined);
 }
+
+/** Compact relative time ("3d ago"). `justNow` is the "moments ago" label. */
+export function timeAgo(ts: number, lang: string, justNow: string): string {
+  if (!ts) return '';
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return justNow;
+  const rtf = new Intl.RelativeTimeFormat(lang === 'ar' ? 'ar' : 'en', { numeric: 'auto' });
+  if (mins < 60) return rtf.format(-mins, 'minute');
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return rtf.format(-hours, 'hour');
+  const days = Math.floor(hours / 24);
+  if (days < 30) return rtf.format(-days, 'day');
+  const months = Math.floor(days / 30);
+  if (months < 12) return rtf.format(-months, 'month');
+  return rtf.format(-Math.floor(months / 12), 'year');
+}

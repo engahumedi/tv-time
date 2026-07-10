@@ -7,6 +7,16 @@ import type { Show, Movie, WatchRecord, ShowList, Profile } from '../types';
 
 export type FollowStatus = 'none' | 'pending' | 'accepted';
 
+/** Fired whenever a follow/block relationship changes, so counts + lists refetch. */
+const CHANGED_EVENT = 'social-changed';
+function emitChanged() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(CHANGED_EVENT));
+}
+export function onSocialChanged(fn: () => void): () => void {
+  window.addEventListener(CHANGED_EVENT, fn);
+  return () => window.removeEventListener(CHANGED_EVENT, fn);
+}
+
 interface ProfileRow {
   id: string;
   username: string;
@@ -97,21 +107,25 @@ export async function searchProfiles(query: string): Promise<Profile[]> {
     .filter((p) => p.id !== uid);
 }
 
-/** The follow status + target visibility for a given user. */
+/** The follow status + target visibility + whether I've blocked them. */
 export async function getRelation(
   targetId: string,
-): Promise<{ status: FollowStatus; targetPublic: boolean }> {
-  if (!supabase) return { status: 'none', targetPublic: false };
+): Promise<{ status: FollowStatus; targetPublic: boolean; iBlocked: boolean }> {
+  if (!supabase) return { status: 'none', targetPublic: false, iBlocked: false };
   const uid = await myId();
-  const [{ data: prof }, { data: rel }] = await Promise.all([
+  const [{ data: prof }, { data: rel }, blk] = await Promise.all([
     supabase.from('profiles').select('is_public').eq('id', targetId).maybeSingle(),
     uid
       ? supabase.from('follows').select('status').eq('follower_id', uid).eq('following_id', targetId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    uid
+      ? supabase.from('blocks').select('blocked_id').eq('blocker_id', uid).eq('blocked_id', targetId).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
   return {
     status: (rel?.status as FollowStatus) ?? 'none',
     targetPublic: !!prof?.is_public,
+    iBlocked: !!blk.data,
   };
 }
 
@@ -126,6 +140,7 @@ export async function follow(targetId: string): Promise<FollowStatus> {
     .select('status')
     .maybeSingle();
   if (error) return 'none';
+  emitChanged();
   return (data?.status as FollowStatus) ?? 'pending';
 }
 
@@ -134,6 +149,59 @@ export async function unfollow(targetId: string): Promise<void> {
   const uid = await myId();
   if (!uid) return;
   await supabase.from('follows').delete().eq('follower_id', uid).eq('following_id', targetId);
+  emitChanged();
+}
+
+/** Remove someone who follows me (kick them out of my followers). */
+export async function removeFollower(followerId: string): Promise<void> {
+  if (!supabase) return;
+  const uid = await myId();
+  if (!uid) return;
+  await supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', uid);
+  emitChanged();
+}
+
+/** My outgoing follow requests still awaiting approval (private targets). */
+export async function outgoingRequests(): Promise<Profile[]> {
+  if (!supabase) return [];
+  const uid = await myId();
+  if (!uid) return [];
+  const { data: rows } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', uid)
+    .eq('status', 'pending');
+  const ids = (rows ?? []).map((r) => r.following_id as string);
+  if (ids.length === 0) return [];
+  const { data: profs } = await supabase.from('profiles').select('*').in('id', ids);
+  return (profs ?? []).map((r) => toProfile(r as ProfileRow));
+}
+
+/** Map of everyone I follow / requested → status, for annotating lists. */
+export async function myFollowMap(): Promise<Map<string, FollowStatus>> {
+  const m = new Map<string, FollowStatus>();
+  if (!supabase) return m;
+  const uid = await myId();
+  if (!uid) return m;
+  const { data } = await supabase.from('follows').select('following_id, status').eq('follower_id', uid);
+  for (const r of data ?? []) m.set(r.following_id as string, r.status as FollowStatus);
+  return m;
+}
+
+/** Block / unblock a user (severs follows both ways server-side). */
+export async function block(targetId: string): Promise<void> {
+  if (!supabase) return;
+  const uid = await myId();
+  if (!uid) return;
+  await supabase.from('blocks').insert({ blocker_id: uid, blocked_id: targetId });
+  emitChanged();
+}
+export async function unblock(targetId: string): Promise<void> {
+  if (!supabase) return;
+  const uid = await myId();
+  if (!uid) return;
+  await supabase.from('blocks').delete().eq('blocker_id', uid).eq('blocked_id', targetId);
+  emitChanged();
 }
 
 /** People who've requested to follow me (pending) — for private accounts. */
@@ -191,6 +259,7 @@ export async function acceptRequest(followerId: string): Promise<void> {
   const uid = await myId();
   if (!uid) return;
   await supabase.from('follows').update({ status: 'accepted' }).eq('follower_id', followerId).eq('following_id', uid);
+  emitChanged();
 }
 
 export async function rejectRequest(followerId: string): Promise<void> {
@@ -198,6 +267,66 @@ export async function rejectRequest(followerId: string): Promise<void> {
   const uid = await myId();
   if (!uid) return;
   await supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', uid);
+  emitChanged();
+}
+
+/** Private accounts I asked to follow that have now approved me (for notifs). */
+export async function acceptedFollows(): Promise<FollowEvent[]> {
+  if (!supabase) return [];
+  const uid = await myId();
+  if (!uid) return [];
+  const { data: rows } = await supabase
+    .from('follows')
+    .select('following_id, accepted_at')
+    .eq('follower_id', uid)
+    .eq('status', 'accepted')
+    .not('accepted_at', 'is', null);
+  const list = (rows ?? []).filter((r) => Number(r.accepted_at) > 0);
+  if (list.length === 0) return [];
+  const ids = list.map((r) => r.following_id as string);
+  const { data: profs } = await supabase.from('profiles').select('*').in('id', ids);
+  const byId = new Map((profs ?? []).map((p) => [p.id as string, toProfile(p as ProfileRow)]));
+  return list
+    .map((r) => {
+      const profile = byId.get(r.following_id as string);
+      return profile ? { profile, ts: Number(r.accepted_at), pending: false } : null;
+    })
+    .filter((x): x is FollowEvent => x !== null);
+}
+
+/** Cross-device "notifications last seen" marker stored on the profile. */
+export async function getNotifsSeen(): Promise<number> {
+  if (!supabase) return 0;
+  const uid = await myId();
+  if (!uid) return 0;
+  const { data } = await supabase.from('profiles').select('notifs_seen_at').eq('id', uid).maybeSingle();
+  return Number(data?.notifs_seen_at ?? 0);
+}
+export async function setNotifsSeen(ts: number): Promise<void> {
+  if (!supabase) return;
+  const uid = await myId();
+  if (!uid) return;
+  await supabase.from('profiles').update({ notifs_seen_at: ts }).eq('id', uid);
+}
+
+/**
+ * Upload an avatar image and save its public URL on my profile.
+ * Stored under `{uid}/…` so the storage RLS lets only the owner write it.
+ */
+export async function uploadAvatar(file: File): Promise<{ url?: string; error?: string }> {
+  if (!supabase) return { error: 'generic' };
+  const uid = await myId();
+  if (!uid) return { error: 'generic' };
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `${uid}/avatar.${ext}`;
+  const up = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+  if (up.error) return { error: 'generic' };
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  const url = `${data.publicUrl}?v=${Date.now()}`; // cache-bust on replace
+  const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', uid);
+  if (error) return { error: 'generic' };
+  emitChanged();
+  return { url };
 }
 
 /** Follower/following counts for a user (public info, via SECURITY DEFINER fn). */
@@ -267,4 +396,69 @@ export async function getUserData(id: string): Promise<FriendData> {
     kind: r.kind ?? 'show',
   }));
   return { shows, watches, movies, lists };
+}
+
+export interface FeedItem {
+  id: string;
+  user: Profile;
+  kind: 'episode' | 'movie';
+  ts: number;
+  title: string;
+  poster: string | null;
+  season?: number;
+  episode?: number;
+  showId?: number;
+  movieId?: number;
+}
+
+/**
+ * Recent watch activity from the people I follow. RLS on watches/movies/shows
+ * already restricts this to profiles I'm allowed to see, so it's safe to query
+ * directly by the set of ids I follow.
+ */
+export async function friendsFeed(): Promise<FeedItem[]> {
+  if (!supabase) return [];
+  const uid = await myId();
+  if (!uid) return [];
+  const following = await followList(uid, 'following');
+  if (following.length === 0) return [];
+  const byId = new Map(following.map((p) => [p.id, p]));
+  const ids = following.map((p) => p.id);
+  const key = (u: string, s: number | string) => `${u}:${s}`;
+
+  const [watchesRes, moviesRes, showsRes] = await Promise.all([
+    supabase.from('watches').select('user_id, show_id, episode_id, season, episode, watched_at')
+      .in('user_id', ids).order('watched_at', { ascending: false }).limit(40),
+    supabase.from('movies').select('user_id, movie_id, watched_at, payload')
+      .in('user_id', ids).eq('watched', true).order('watched_at', { ascending: false }).limit(40),
+    supabase.from('shows').select('user_id, show_id, payload').in('user_id', ids),
+  ]);
+
+  const showByKey = new Map(
+    (showsRes.data ?? []).map((r: { user_id: string; show_id: number; payload: Show }) => [key(r.user_id, r.show_id), r.payload]),
+  );
+
+  const items: FeedItem[] = [];
+  for (const r of (watchesRes.data ?? []) as { user_id: string; show_id: number; episode_id: string; season: number; episode: number; watched_at: number }[]) {
+    const user = byId.get(r.user_id);
+    if (!user) continue;
+    const show = showByKey.get(key(r.user_id, r.show_id));
+    items.push({
+      id: `w:${r.user_id}:${r.episode_id}`,
+      user, kind: 'episode', ts: Number(r.watched_at),
+      title: show?.name ?? '', poster: show?.posterPath ?? null,
+      season: r.season, episode: r.episode, showId: r.show_id,
+    });
+  }
+  for (const r of (moviesRes.data ?? []) as { user_id: string; movie_id: number; watched_at: number | null; payload: Movie }[]) {
+    const user = byId.get(r.user_id);
+    if (!user) continue;
+    items.push({
+      id: `m:${r.user_id}:${r.movie_id}`,
+      user, kind: 'movie', ts: Number(r.watched_at ?? 0),
+      title: r.payload?.title ?? '', poster: r.payload?.posterPath ?? null,
+      movieId: r.movie_id,
+    });
+  }
+  return items.sort((a, b) => b.ts - a.ts).slice(0, 40);
 }
