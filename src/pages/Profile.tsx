@@ -77,10 +77,16 @@ export function Profile() {
   const [creatingList, setCreatingList] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    getMyProfile().then((p) => setAvatarUrl(p?.avatarUrl ?? null)).catch(() => {});
+    getMyProfile()
+      .then((p) => {
+        setAvatarUrl(p?.avatarUrl ?? null);
+        setUsername(p?.username ?? null);
+      })
+      .catch(() => {});
   }, [user]);
 
   if (!stats || !shows) {
@@ -127,6 +133,7 @@ export function Profile() {
           )}
           <div className="pb-1">
             <h1 className="text-2xl font-semibold leading-tight">{name}</h1>
+            {username && <p className="text-sm text-faint">@{username}</p>}
             {user && <div className="mt-1"><FollowStats userId={user.id} isMe /></div>}
             <div className="flex items-center gap-3">
               <Link to="/settings" className="text-sm text-gold hover:underline">
