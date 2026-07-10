@@ -1,7 +1,8 @@
-// Ready-made profile pictures: iconic, widely-recognizable faces from film & TV.
+// Ready-made profile pictures: iconic characters from popular films.
 // We reference TMDB's image CDN (the same source the app already uses for every
 // poster/still), so nothing copyrighted is bundled or re-hosted here — picking
-// one just stores the TMDB image URL as your avatar.
+// one just stores the TMDB image URL as your avatar. Each entry is a
+// character-forward poster hand-checked to read well cropped to a circle.
 
 import { img } from './tmdb';
 
@@ -11,26 +12,26 @@ interface Preset {
 }
 
 const PRESETS: Preset[] = [
-  { name: 'Robert Downey Jr.', path: '/5qHNjhtjMD4YWH3UP0rm4tKwxCL.jpg' },
-  { name: 'Leonardo DiCaprio', path: '/mkdRcVIQl4WZhDf1vXKWTD7HZrZ.jpg' },
-  { name: 'Scarlett Johansson', path: '/druW5adKddizHNSoPbI0q7Mvn0K.jpg' },
-  { name: 'Keanu Reeves', path: '/8RZLOyYGsoRe9p44q3xin9QkMHv.jpg' },
-  { name: 'Emma Watson', path: '/A14lLCZYDhfYdBa0fFRpwMDiwRN.jpg' },
-  { name: 'Tom Holland', path: '/xKBAaPIa1c7tzZD3Y0MhBLv4hPE.jpg' },
-  { name: 'Benedict Cumberbatch', path: '/wz3MRiMmoz6b5X3oSzMRC9nLxY1.jpg' },
-  { name: 'Emilia Clarke', path: '/u59kTmNHXzaGZqokivxLPiBVIML.jpg' },
-  { name: 'Cillian Murphy', path: '/2lKs67r7FI4bPu0AXxMUJZxmUXn.jpg' },
-  { name: 'Bryan Cranston', path: '/npIIZJGSrcJIJ6yHdmbqO6Jzo5I.jpg' },
-  { name: 'Aaron Paul', path: '/8Ac9uuoYwZoYVAIJfRLzzLsGGJn.jpg' },
-  { name: 'Samuel L. Jackson', path: '/AiAYAqwpM5xmiFrAIeQvUXDCVvo.jpg' },
-  { name: 'Dwayne Johnson', path: '/5QApZVV8FUFlVxQpIK3Ew6cqotq.jpg' },
-  { name: 'Jason Statham', path: '/pXGSq2UpcDE2NMF8LR56QZf5U1q.jpg' },
-  { name: 'Tom Cruise', path: '/3mShHjSQR7NXOVbdTu5rT2Qd0MN.jpg' },
-  { name: 'Tom Hanks', path: '/oFvZoKI6lvU03n4YoNGAll9rkas.jpg' },
-  { name: 'Brad Pitt', path: '/m09Y1YfPPeNYYUSHnnVqahkrC1o.jpg' },
-  { name: 'Emily Blunt', path: '/5nCSG5TL1bP1geD8aaBfaLnLLCD.jpg' },
-  { name: 'Helena Bonham Carter', path: '/hJMbNSPJ2PCahsP3rNEU39C8GWU.jpg' },
-  { name: 'Robert De Niro', path: '/cT8htcckIuyI1Lqwt1CvD02ynTh.jpg' },
+  { name: 'Shrek', path: '/iB64vpL3dIObOtMZgX3RqdVdQDc.jpg' },
+  { name: 'Woody & Buzz', path: '/uXDfjJbdP4ijW5hWSBrPrlKpxab.jpg' },
+  { name: 'Po', path: '/wWt4JYXTg5Wr3xBW2phBrMKgp3x.jpg' },
+  { name: 'Elsa & Anna', path: '/itAKcobTYGpYT8Phwjd8c9hleTo.jpg' },
+  { name: 'Minions', path: '/dr02BdCNAUPVU07aOodwPYv6HCf.jpg' },
+  { name: 'Simba', path: '/sKCr78MXSLixwmZ8DyJLrpMsd15.jpg' },
+  { name: 'Moana & Maui', path: '/9tzN8sPbyod2dsa0lwuvrwBDWra.jpg' },
+  { name: 'Baymax', path: '/2mxS4wUimwlLmI1xp6QW6NSU361.jpg' },
+  { name: 'Sulley & Mike', path: '/wFSpyMsp7H0ttERbxY7Trlv8xry.jpg' },
+  { name: 'Puss in Boots', path: '/kuf6dutpsT0vSVehic3EZIqkOBt.jpg' },
+  { name: 'Zootopia', path: '/hlK0e0wAQ3VLuJcsfIYPvb4JVud.jpg' },
+  { name: 'Spider-Verse', path: '/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg' },
+  { name: 'Toothless', path: '/ygGmAO60t8GyqUo9xYeYxSZAR3b.jpg' },
+  { name: 'Aladdin & Genie', path: '/eLFfl7vS8dkeG1hKp5mwbm37V83.jpg' },
+  { name: 'The Incredibles', path: '/2LqaLgk4Z226KkgPJuiOQ58wvrm.jpg' },
+  { name: 'Encanto', path: '/4j0PNHkMr5ax3IA8tjtxcmPU3QT.jpg' },
+  { name: 'Rapunzel', path: '/ym7Kst6a4uodryxqbGOxmewF235.jpg' },
+  { name: 'Ice Age', path: '/gLhHHZUzeseRXShoDyC4VqLgsNv.jpg' },
+  { name: 'Madagascar', path: '/zMpJY5CJKUufG9OTw0In4eAFqPX.jpg' },
+  { name: 'Remy', path: '/t3vaWRPSf6WjDSamIkKDs1iQWna.jpg' },
 ];
 
 export interface PresetAvatar {
@@ -41,5 +42,5 @@ export interface PresetAvatar {
 /** Preset avatars as ready-to-use image URLs. */
 export const PRESET_AVATARS: PresetAvatar[] = PRESETS.map((p) => ({
   name: p.name,
-  url: img(p.path, 'w200')!,
+  url: img(p.path, 'w500')!,
 }));
