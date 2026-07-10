@@ -9,6 +9,7 @@ import { exportData, exportWatchesCsv, triggerDownload } from '../lib/exporter';
 import { clearAll } from '../lib/repo';
 import { getMyProfile, saveMyProfile, normalizeUsername, uploadAvatar } from '../lib/social';
 import { Avatar } from './People';
+import { AvatarCropModal } from '../components/AvatarCropModal';
 import { useAuth } from '../lib/auth';
 
 export function Settings() {
@@ -40,6 +41,7 @@ export function Settings() {
   const [profErr, setProfErr] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -55,17 +57,22 @@ export function Settings() {
       .catch(() => {});
   }, [user]);
 
-  async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+  function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 15 * 1024 * 1024) {
       setProfErr(t('settings.avatar_too_big'));
       return;
     }
     setProfErr('');
+    setCropFile(file); // open the cropper; upload happens on confirm
+  }
+
+  async function onCropped(cropped: File) {
+    setCropFile(null);
     setAvatarBusy(true);
-    const res = await uploadAvatar(file);
+    const res = await uploadAvatar(cropped);
     setAvatarBusy(false);
     if (res.error) setProfErr(t('settings.avatar_error'));
     else if (res.url) setAvatarUrl(res.url);
@@ -362,6 +369,10 @@ export function Settings() {
           </button>
         )}
       </section>
+
+      {cropFile && (
+        <AvatarCropModal file={cropFile} onCancel={() => setCropFile(null)} onCropped={onCropped} />
+      )}
     </div>
   );
 }
