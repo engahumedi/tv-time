@@ -95,7 +95,7 @@ export function Settings() {
       const uname = normalizeUsername(username);
       const res = await saveMyProfile({ username: uname, displayName: name, isPublic });
       if (res.error) {
-        setProfErr(t(`settings.username_${res.error}`));
+        setProfErr(t(`settings.${res.error === 'generic' ? 'username_generic' : res.error}`));
         return;
       }
       setUsername(uname);
