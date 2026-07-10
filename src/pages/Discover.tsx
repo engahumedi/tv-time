@@ -20,6 +20,7 @@ import {
 import { ShowCard } from '../components/ShowCard';
 import { MovieCard } from '../components/MovieCard';
 import { ForYou } from '../components/ForYou';
+import { FriendsPopular } from '../components/FriendsPopular';
 import { PersonCard } from '../components/PersonCard';
 import { PersonModal } from '../components/PersonModal';
 import { EmptyState } from '../components/EmptyState';
@@ -278,6 +279,7 @@ export function Discover() {
       )}
 
       {/* Personalized rails, seeded from your library (live data only). */}
+      {!searching && tab === 'trending' && <FriendsPopular kind={kind} />}
       {!searching && tab === 'trending' && <ForYou kind={kind} />}
 
       {loading && <GridSkeleton />}

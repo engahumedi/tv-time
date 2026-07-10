@@ -59,6 +59,17 @@ export const ar: Translation = {
   detail: {
     where_to_watch: 'أين تشاهده',
   },
+  onboarding: {
+    skip: 'تخطّي',
+    next: 'التالي',
+    done: 'لنبدأ',
+    track_title: 'تابِع ما تشاهده',
+    track_body: 'أضف المسلسلات والأفلام، علّم الحلقات كمشاهَدة، وأكمل من حيث توقفت.',
+    discover_title: 'اكتشف المزيد',
+    discover_body: 'تصفّح الرائج، فلتر حسب التصنيف أو السنة، واحصل على ترشيحات تناسب ذوقك.',
+    social_title: 'تابِع أصدقاءك',
+    social_body: 'تابِع أشخاصًا، شوف وش يتفرّجون، وتفاعلوا مع الحلقات سوا.',
+  },
   notifications: {
     title: 'التنبيهات',
     empty_title: 'لا توجد تنبيهات',
@@ -68,6 +79,8 @@ export const ar: Translation = {
     requested_follow: 'طلب متابعتك',
     started_following: 'بدأ بمتابعتك',
     request_accepted: 'قبل طلب متابعتك',
+    liked: 'أعجب بنشاطك',
+    commented: 'علّق على نشاطك',
     just_now: 'الآن',
   },
   common: {
@@ -140,6 +153,8 @@ export const ar: Translation = {
     demo_notice:
       'تعمل في الوضع التجريبي بمكتبة عيّنة. أضِف مفتاح TMDB للبحث الكامل.',
     in_library: 'في مكتبتك',
+    popular_with_friends: 'رائج بين من تتابعهم',
+    friends_have: '{{n}} ممن تتابعهم لديه',
     tab_search: 'بحث',
     tab_trending: 'الرائج',
     tab_top: 'الأعلى تقييمًا',
@@ -397,6 +412,7 @@ export const ar: Translation = {
     private_hint: 'المتابِعون المقبولون فقط',
     public: 'عام',
     public_hint: 'يشوفه الجميع',
+    accent: 'لون التمييز',
     change_avatar: 'تغيير الصورة',
     avatar_hint: 'JPG أو PNG، حتى 5 ميغابايت.',
     avatar_too_big: 'الصورة كبيرة جدًا (الحد 5 ميغابايت).',
@@ -420,6 +436,10 @@ export const ar: Translation = {
     danger: 'منطقة الخطر',
     reset: 'مسح كل البيانات',
     reset_confirm: 'سيحذف هذا مكتبتك وسجلّك بالكامل على هذا الجهاز نهائيًا. المتابعة؟',
+    delete_account: 'حذف حسابي',
+    delete_account_confirm: 'سيحذف هذا حسابك وكل بياناتك من السحابة نهائيًا. لا يمكن التراجع. المتابعة؟',
+    delete_account_confirm2: 'متأكد تمامًا؟ سيُمسح ملفك ومكتبتك ومتابعاتك وتفاعلاتك.',
+    delete_account_failed: 'تعذّر حذف الحساب. حاول مرة ثانية.',
   },
   errors: {
     generic: 'حدث خطأ ما. يُرجى المحاولة مجددًا.',

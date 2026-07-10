@@ -15,13 +15,43 @@ const TMDB_KEY = Deno.env.get('TMDB_API_KEY') ?? '';
 const OMDB_KEY = Deno.env.get('OMDB_API_KEY') ?? '';
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const OMDB_BASE = 'https://www.omdbapi.com/';
+// Auto-injected into every Supabase Edge Function.
+const SB_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SB_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+const SB_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
 };
+
+/**
+ * Permanently delete the calling user's account. The bearer token must be the
+ * user's own access token; we verify it, then use the service role to remove
+ * the auth user (which cascades to all their rows via ON DELETE CASCADE).
+ */
+async function deleteAccount(req: Request): Promise<Response> {
+  const auth = req.headers.get('authorization') ?? '';
+  const token = auth.replace(/^Bearer\s+/i, '');
+  if (!token || !SB_URL || !SB_SERVICE) return json(401, { error: 'unauthorized' });
+
+  // Resolve the user id from their token.
+  const who = await fetch(`${SB_URL}/auth/v1/user`, {
+    headers: { apikey: SB_ANON, Authorization: `Bearer ${token}` },
+  });
+  if (!who.ok) return json(401, { error: 'unauthorized' });
+  const user = await who.json();
+  if (!user?.id) return json(401, { error: 'unauthorized' });
+
+  const del = await fetch(`${SB_URL}/auth/v1/admin/users/${user.id}`, {
+    method: 'DELETE',
+    headers: { apikey: SB_SERVICE, Authorization: `Bearer ${SB_SERVICE}` },
+  });
+  if (!del.ok) return json(502, { error: 'delete_failed' });
+  return json(200, { ok: true });
+}
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -37,6 +67,10 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const path = url.pathname;
     const params = url.searchParams;
+
+    if (path.endsWith('/account') && req.method === 'DELETE') {
+      return await deleteAccount(req);
+    }
 
     let target: URL;
     let isSearch = false;

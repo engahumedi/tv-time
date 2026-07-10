@@ -3,6 +3,7 @@
 // client can only ever fetch data it's actually allowed to see.
 
 import { supabase } from './supabase';
+import { db } from './db';
 import type { Show, Movie, WatchRecord, ShowList, Profile } from '../types';
 
 export type FollowStatus = 'none' | 'pending' | 'accepted';
@@ -544,6 +545,42 @@ export async function deleteComment(id: string): Promise<void> {
   await supabase.from('activity_comments').delete().eq('id', id);
 }
 
+export interface InteractionEvent {
+  kind: 'like' | 'comment';
+  profile: Profile;
+  ts: number;
+  activityId: string;
+  body?: string;
+}
+
+/** Likes + comments other people left on MY activities (for notifications). */
+export async function myActivityInteractions(): Promise<InteractionEvent[]> {
+  if (!supabase) return [];
+  const uid = await myId();
+  if (!uid) return [];
+  const [likesRes, commentsRes] = await Promise.all([
+    supabase.from('activity_likes').select('actor_id, activity_id, created_at').eq('owner_id', uid).neq('actor_id', uid),
+    supabase.from('activity_comments').select('actor_id, activity_id, body, created_at').eq('owner_id', uid).neq('actor_id', uid),
+  ]);
+  type Row = { actor_id: string; activity_id: string; created_at: number; body?: string; kind: 'like' | 'comment' };
+  const rows: Row[] = [
+    ...((likesRes.data ?? []) as Omit<Row, 'kind'>[]).map((r) => ({ ...r, kind: 'like' as const })),
+    ...((commentsRes.data ?? []) as Omit<Row, 'kind'>[]).map((r) => ({ ...r, kind: 'comment' as const })),
+  ];
+  if (rows.length === 0) return [];
+  const ids = [...new Set(rows.map((r) => r.actor_id))];
+  const { data: profs } = await supabase.from('profiles').select('*').in('id', ids);
+  const byId = new Map((profs ?? []).map((p) => [p.id as string, toProfile(p as ProfileRow)]));
+  return rows
+    .map((r): InteractionEvent | null => {
+      const profile = byId.get(r.actor_id);
+      return profile
+        ? { kind: r.kind, profile, ts: Number(r.created_at), activityId: r.activity_id, body: r.body }
+        : null;
+    })
+    .filter((x): x is InteractionEvent => x !== null);
+}
+
 export interface FeedItem {
   id: string;
   user: Profile;
@@ -555,6 +592,53 @@ export interface FeedItem {
   episode?: number;
   showId?: number;
   movieId?: number;
+}
+
+export interface PopularItem {
+  kind: 'show' | 'movie';
+  id: number;
+  title: string;
+  poster: string | null;
+  count: number;
+}
+
+/**
+ * What the people I follow have in their libraries, ranked by how many of them
+ * have it — minus what's already in my own library. A social discovery rail.
+ */
+export async function popularAmongFollowing(): Promise<PopularItem[]> {
+  if (!supabase) return [];
+  const uid = await myId();
+  if (!uid) return [];
+  const following = await followList(uid, 'following');
+  const ids = following.map((p) => p.id);
+  if (ids.length === 0) return [];
+
+  const [showsRes, moviesRes, mineShows, mineMovies] = await Promise.all([
+    supabase.from('shows').select('show_id, payload').in('user_id', ids),
+    supabase.from('movies').select('movie_id, payload').in('user_id', ids),
+    db.shows.toArray(),
+    db.movies.toArray(),
+  ]);
+  const haveShows = new Set(mineShows.map((s) => s.id));
+  const haveMovies = new Set(mineMovies.map((m) => m.id));
+
+  const acc = new Map<string, PopularItem>();
+  for (const r of (showsRes.data ?? []) as { show_id: number; payload: Show }[]) {
+    if (haveShows.has(r.show_id)) continue;
+    const key = `s:${r.show_id}`;
+    const cur = acc.get(key);
+    if (cur) cur.count += 1;
+    else acc.set(key, { kind: 'show', id: r.show_id, title: r.payload?.name ?? '', poster: r.payload?.posterPath ?? null, count: 1 });
+  }
+  for (const r of (moviesRes.data ?? []) as { movie_id: number; payload: Movie }[]) {
+    if (haveMovies.has(r.movie_id)) continue;
+    const key = `m:${r.movie_id}`;
+    const cur = acc.get(key);
+    if (cur) cur.count += 1;
+    else acc.set(key, { kind: 'movie', id: r.movie_id, title: r.payload?.title ?? '', poster: r.payload?.posterPath ?? null, count: 1 });
+  }
+  return [...acc.values()].sort((a, b) => b.count - a.count).slice(0, 12);
 }
 
 /**

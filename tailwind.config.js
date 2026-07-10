@@ -17,13 +17,14 @@ export default {
         fg: 'rgb(var(--fg) / <alpha-value>)',
         muted: 'rgb(var(--muted) / <alpha-value>)',
         faint: 'rgb(var(--faint) / <alpha-value>)',
-        // Muted amber accent (same in both themes) — used only for small touches.
+        // Accent — driven by CSS variables so the user can pick a colour.
+        // (Named "gold" for historical reasons; the whole app references it.)
         gold: {
-          DEFAULT: '#c9a24b',
-          400: '#d6b56c',
-          500: '#c9a24b',
-          600: '#b08a38',
-          700: '#8f6f2e',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          400: 'rgb(var(--accent-400) / <alpha-value>)',
+          500: 'rgb(var(--accent) / <alpha-value>)',
+          600: 'rgb(var(--accent-600) / <alpha-value>)',
+          700: 'rgb(var(--accent-700) / <alpha-value>)',
         },
       },
       fontFamily: {

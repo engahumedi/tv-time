@@ -8,17 +8,27 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { db } from './db';
-import { followerActivity, acceptedFollows, getNotifsSeen, setNotifsSeen, onSocialChanged } from './social';
+import { followerActivity, acceptedFollows, myActivityInteractions, getNotifsSeen, setNotifsSeen, onSocialChanged } from './social';
 import type { Profile } from '../types';
 
-export type NotifType = 'request' | 'follow' | 'accepted' | 'episode';
+export type NotifType = 'request' | 'follow' | 'accepted' | 'like' | 'comment' | 'episode';
+
+/** Turn an activity_id ("w:owner:showId:s:e" / "m:owner:movieId") into a route. */
+function activityLink(activityId: string): string {
+  const p = activityId.split(':');
+  if (p[0] === 'w' && p[2]) return `/show/${p[2]}`;
+  if (p[0] === 'm' && p[2]) return `/movie/${p[2]}`;
+  return '/people';
+}
 
 export interface Notif {
   id: string;
   type: NotifType;
   ts: number;
-  // follow / request
+  // follow / request / like / comment
   profile?: Profile;
+  body?: string;
+  linkTo?: string;
   // episode
   showId?: number;
   showName?: string;
@@ -77,10 +87,14 @@ async function episodeNotifs(): Promise<Notif[]> {
   return out;
 }
 
-/** Follow requests + new followers + accepted requests from the cloud. */
+/** Follow requests, new followers, accepted requests, likes + comments. */
 async function followNotifs(): Promise<Notif[]> {
   try {
-    const [incoming, accepted] = await Promise.all([followerActivity(), acceptedFollows()]);
+    const [incoming, accepted, interactions] = await Promise.all([
+      followerActivity(),
+      acceptedFollows(),
+      myActivityInteractions(),
+    ]);
     const a: Notif[] = incoming.map((ev) => ({
       id: `${ev.pending ? 'req' : 'fol'}:${ev.profile.id}`,
       type: ev.pending ? 'request' : 'follow',
@@ -93,7 +107,15 @@ async function followNotifs(): Promise<Notif[]> {
       ts: ev.ts,
       profile: ev.profile,
     }));
-    return [...a, ...b];
+    const c: Notif[] = interactions.map((ev) => ({
+      id: `${ev.kind}:${ev.profile.id}:${ev.activityId}`,
+      type: ev.kind,
+      ts: ev.ts,
+      profile: ev.profile,
+      body: ev.body,
+      linkTo: activityLink(ev.activityId),
+    }));
+    return [...a, ...b, ...c];
   } catch {
     return [];
   }

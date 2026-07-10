@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Lock, Globe, Camera } from 'lucide-react';
-import { getTheme, setTheme, getDisplayName, setDisplayName, type Theme } from '../lib/settings';
+import { getTheme, setTheme, getAccent, setAccent, ACCENTS, getDisplayName, setDisplayName, type Theme, type Accent } from '../lib/settings';
 import { LanguageToggle } from '../components/LanguageToggle';
 import { AccountCard } from '../components/AccountCard';
 import { exportData, exportWatchesCsv, triggerDownload } from '../lib/exporter';
@@ -13,8 +13,24 @@ import { useAuth } from '../lib/auth';
 
 export function Settings() {
   const { t } = useTranslation();
-  const { user, updatePassword } = useAuth();
+  const { user, updatePassword, deleteAccount } = useAuth();
+  const [deleting, setDeleting] = useState(false);
+
+  async function onDeleteAccount() {
+    if (!confirm(t('settings.delete_account_confirm'))) return;
+    if (!confirm(t('settings.delete_account_confirm2'))) return;
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // Session is gone; App re-renders to the welcome screen.
+    } catch {
+      alert(t('settings.delete_account_failed'));
+    } finally {
+      setDeleting(false);
+    }
+  }
   const [theme, setThemeState] = useState<Theme>(getTheme());
+  const [accent, setAccentState] = useState<Accent>(getAccent());
   const [name, setName] = useState(getDisplayName());
   const [savedName, setSavedName] = useState(false);
 
@@ -65,6 +81,11 @@ export function Settings() {
   function chooseTheme(next: Theme) {
     setTheme(next);
     setThemeState(next);
+  }
+
+  function chooseAccent(next: Accent) {
+    setAccent(next);
+    setAccentState(next);
   }
 
   async function saveProfile() {
@@ -133,6 +154,21 @@ export function Settings() {
               >
                 {t(`settings.${tm}`)}
               </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t border-overlay/[0.06] py-3">
+          <span className="font-semibold">{t('settings.accent')}</span>
+          <div className="flex gap-2">
+            {(Object.keys(ACCENTS) as Accent[]).map((a) => (
+              <button
+                key={a}
+                onClick={() => chooseAccent(a)}
+                className={`h-7 w-7 rounded-full ring-2 ring-offset-2 ring-offset-navy-900 transition-all ${accent === a ? 'ring-fg' : 'ring-transparent'}`}
+                style={{ background: `rgb(${ACCENTS[a][0]})` }}
+                aria-label={a}
+                aria-pressed={accent === a}
+              />
             ))}
           </div>
         </div>
@@ -316,6 +352,15 @@ export function Settings() {
         >
           {t('settings.reset')}
         </button>
+        {user && (
+          <button
+            className="btn mt-2 w-full border border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+            onClick={onDeleteAccount}
+            disabled={deleting}
+          >
+            {deleting ? t('auth.working') : t('settings.delete_account')}
+          </button>
+        )}
       </section>
     </div>
   );

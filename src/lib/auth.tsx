@@ -6,8 +6,9 @@ import {
   type ReactNode,
 } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { supabase, hasSupabase } from './supabase';
+import { supabase, hasSupabase, functionsBase, supabaseAnonKey } from './supabase';
 import { setCloudUser, syncAfterLogin } from './cloud';
+import { clearAll } from './repo';
 
 interface AuthState {
   /** True when Supabase is configured (login is available). */
@@ -25,6 +26,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -119,6 +121,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRecovery(false);
   }
 
+  async function deleteAccount() {
+    if (!supabase) throw new Error('auth-unavailable');
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    const base = functionsBase();
+    if (!token || !base) throw new Error('no-session');
+    const res = await fetch(`${base}/api/account`, {
+      method: 'DELETE',
+      headers: { apikey: supabaseAnonKey ?? '', Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('delete-failed');
+    // Wipe the local mirror, then end the session.
+    await clearAll();
+    await supabase.auth.signOut();
+    setCloudUser(null);
+    setUser(null);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -133,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         sendPasswordReset,
         updatePassword,
+        deleteAccount,
       }}
     >
       {children}

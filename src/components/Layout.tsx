@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BottomNav } from './BottomNav';
 import { Sidebar, Logo } from './Sidebar';
 import { LanguageToggle } from './LanguageToggle';
 import { NotificationsBell } from './NotificationsBell';
+import { Onboarding, hasOnboarded } from './Onboarding';
 import { resetConfetti } from '../lib/celebrate';
 
 /**
@@ -15,6 +16,7 @@ import { resetConfetti } from '../lib/celebrate';
 export function Layout() {
   const { t } = useTranslation();
   const location = useLocation();
+  const [showIntro, setShowIntro] = useState(() => !hasOnboarded());
 
   // Clear any lingering celebration confetti when the route changes.
   useEffect(() => {
@@ -56,6 +58,8 @@ export function Layout() {
       </div>
 
       <BottomNav />
+
+      {showIntro && <Onboarding onClose={() => setShowIntro(false)} />}
     </div>
   );
 }

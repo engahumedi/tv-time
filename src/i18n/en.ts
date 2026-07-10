@@ -57,6 +57,17 @@ export const en = {
   detail: {
     where_to_watch: 'Where to watch',
   },
+  onboarding: {
+    skip: 'Skip',
+    next: 'Next',
+    done: 'Get started',
+    track_title: 'Track what you watch',
+    track_body: 'Add shows and movies, mark episodes watched, and pick up right where you left off.',
+    discover_title: 'Discover more',
+    discover_body: 'Browse what’s trending, filter by genre or year, and get picks based on your taste.',
+    social_title: 'Follow your friends',
+    social_body: 'Follow people, see what they’re watching, and react to episodes together.',
+  },
   notifications: {
     title: 'Notifications',
     empty_title: 'No notifications',
@@ -66,6 +77,8 @@ export const en = {
     requested_follow: 'asked to follow you',
     started_following: 'started following you',
     request_accepted: 'accepted your follow request',
+    liked: 'liked your activity',
+    commented: 'commented on your activity',
     just_now: 'just now',
   },
   common: {
@@ -138,6 +151,8 @@ export const en = {
     demo_notice:
       'Running in demo mode with a sample library. Add a TMDB key to search everything.',
     in_library: 'In your library',
+    popular_with_friends: 'Popular with people you follow',
+    friends_have: '{{n}} following have it',
     tab_search: 'Search',
     tab_trending: 'Trending',
     tab_top: 'Top rated',
@@ -395,6 +410,7 @@ export const en = {
     private_hint: 'Only accepted followers',
     public: 'Public',
     public_hint: 'Anyone can view',
+    accent: 'Accent colour',
     change_avatar: 'Change photo',
     avatar_hint: 'JPG or PNG, up to 5 MB.',
     avatar_too_big: 'That image is too large (max 5 MB).',
@@ -418,6 +434,10 @@ export const en = {
     danger: 'Danger zone',
     reset: 'Reset all data',
     reset_confirm: 'This permanently deletes your entire library and history on this device. Continue?',
+    delete_account: 'Delete my account',
+    delete_account_confirm: 'This permanently deletes your account and all your data from the cloud. This cannot be undone. Continue?',
+    delete_account_confirm2: 'Are you absolutely sure? Your profile, library, follows and reactions will be erased.',
+    delete_account_failed: 'Couldn’t delete your account. Please try again.',
   },
   errors: {
     generic: 'Something went wrong. Please try again.',

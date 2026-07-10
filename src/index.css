@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 /* Theme tokens (space-separated RGB channels, consumed via rgb(var(--x)/a)). */
+:root {
+  /* Accent (amber default) — overridden at runtime by the accent picker. */
+  --accent: 201 162 75;
+  --accent-400: 214 181 108;
+  --accent-600: 176 138 56;
+  --accent-700: 143 111 46;
+}
+
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -69,7 +77,7 @@ html[dir='rtl'] .rtl-flip {
 
 /* Visible keyboard focus for accessibility (mouse clicks stay clean). */
 :focus-visible {
-  outline: 2px solid rgba(201, 162, 75, 0.75);
+  outline: 2px solid rgb(var(--accent) / 0.75);
   outline-offset: 2px;
   border-radius: 6px;
 }

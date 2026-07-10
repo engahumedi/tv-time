@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bell, UserCheck, Check, X, Tv } from 'lucide-react';
+import { Bell, UserCheck, Check, X, Tv, Heart, MessageCircle } from 'lucide-react';
 import { useNotifications, markAllSeen, type Notif } from '../lib/notifications';
 import { acceptRequest, rejectRequest } from '../lib/social';
 import { img } from '../lib/tmdb';
@@ -105,18 +105,27 @@ function NotifRow({
   const label =
     n.type === 'request' ? 'notifications.requested_follow'
     : n.type === 'accepted' ? 'notifications.request_accepted'
+    : n.type === 'like' ? 'notifications.liked'
+    : n.type === 'comment' ? 'notifications.commented'
     : 'notifications.started_following';
+  // Likes/comments point at the title they're about; follow events at the profile.
+  const detailTo = (n.type === 'like' || n.type === 'comment') ? (n.linkTo ?? `/u/${profile.id}`) : `/u/${profile.id}`;
+  const TrailingIcon = n.type === 'like' ? Heart : n.type === 'comment' ? MessageCircle : UserCheck;
   return (
     <div className="flex items-center gap-3 rounded-xl border border-overlay/[0.07] bg-navy-800 p-2.5">
       <Link to={`/u/${profile.id}`} className="shrink-0">
         <Avatar name={profile.displayName} url={profile.avatarUrl} />
       </Link>
-      <Link to={`/u/${profile.id}`} className="min-w-0 flex-1">
+      <Link to={detailTo} className="min-w-0 flex-1">
         <p className="truncate text-sm">
           <span className="font-semibold">{profile.displayName}</span>{' '}
           {t(label)}
         </p>
-        <p className="truncate text-xs text-faint">@{profile.username} · {when}</p>
+        {n.type === 'comment' && n.body ? (
+          <p className="truncate text-xs text-muted">“{n.body}” · {when}</p>
+        ) : (
+          <p className="truncate text-xs text-faint">@{profile.username} · {when}</p>
+        )}
       </Link>
       {n.type === 'request' ? (
         <>
@@ -129,7 +138,7 @@ function NotifRow({
         </>
       ) : (
         <span className="shrink-0 text-muted">
-          <UserCheck size={18} strokeWidth={1.75} />
+          <TrailingIcon size={18} strokeWidth={1.75} />
         </span>
       )}
     </div>
