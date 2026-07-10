@@ -8,6 +8,7 @@ import { markWatched, unmarkWatched, rateEpisode, setEpisodeNote } from '../lib/
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
 import { StarRating } from './StarRating';
+import { EpisodeReactions } from './EpisodeReactions';
 import type { Episode, Show } from '../types';
 
 /** Bottom-sheet with full episode details, watched date, and a 5-star rating. */
@@ -160,6 +161,9 @@ export function EpisodeModal({
               </button>
             </>
           )}
+
+          {/* Reactions (shared socially) */}
+          <EpisodeReactions episodeId={episode.id} showId={show.id} />
         </div>
       </motion.div>
     </div>

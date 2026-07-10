@@ -19,6 +19,7 @@ import { Poster } from '../components/Poster';
 import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { ListPickerModal } from '../components/ListPickerModal';
+import { WhereToWatch } from '../components/WhereToWatch';
 import type { Movie } from '../types';
 
 export function MovieDetail() {
@@ -231,6 +232,10 @@ export function MovieDetail() {
             <p className="text-sm leading-relaxed text-fg/90">{movie.overview}</p>
           </section>
         )}
+
+        <div className="mt-6">
+          <WhereToWatch kind="movie" id={movieId} />
+        </div>
       </div>
 
       {showLists && (

@@ -398,6 +398,152 @@ export async function getUserData(id: string): Promise<FriendData> {
   return { shows, watches, movies, lists };
 }
 
+/* ---------------- Episode reactions ---------------- */
+
+export interface EpisodeReaction {
+  profile: Profile;
+  emoji: string | null;
+  body: string | null;
+  createdAt: number;
+}
+
+/** All viewable reactions for an episode (mine + friends'), newest first. */
+export async function episodeReactions(episodeId: string): Promise<EpisodeReaction[]> {
+  if (!supabase) return [];
+  const { data: rows } = await supabase
+    .from('episode_reactions')
+    .select('user_id, emoji, body, created_at')
+    .eq('episode_id', episodeId)
+    .order('created_at', { ascending: false });
+  const list = rows ?? [];
+  if (list.length === 0) return [];
+  const ids = list.map((r) => r.user_id as string);
+  const { data: profs } = await supabase.from('profiles').select('*').in('id', ids);
+  const byId = new Map((profs ?? []).map((p) => [p.id as string, toProfile(p as ProfileRow)]));
+  return list
+    .map((r) => {
+      const profile = byId.get(r.user_id as string);
+      return profile ? { profile, emoji: r.emoji ?? null, body: r.body ?? null, createdAt: Number(r.created_at) } : null;
+    })
+    .filter((x): x is EpisodeReaction => x !== null);
+}
+
+/** My reaction for an episode, or null. */
+export async function myEpisodeReaction(episodeId: string): Promise<{ emoji: string | null; body: string | null } | null> {
+  if (!supabase) return null;
+  const uid = await myId();
+  if (!uid) return null;
+  const { data } = await supabase
+    .from('episode_reactions')
+    .select('emoji, body')
+    .eq('user_id', uid)
+    .eq('episode_id', episodeId)
+    .maybeSingle();
+  return data ? { emoji: data.emoji ?? null, body: data.body ?? null } : null;
+}
+
+/** Create/update or clear my reaction for an episode. */
+export async function saveEpisodeReaction(
+  episodeId: string,
+  showId: number,
+  patch: { emoji?: string | null; body?: string | null },
+): Promise<void> {
+  if (!supabase) return;
+  const uid = await myId();
+  if (!uid) return;
+  const emoji = patch.emoji ?? null;
+  const body = (patch.body ?? '').trim() || null;
+  if (!emoji && !body) {
+    await supabase.from('episode_reactions').delete().eq('user_id', uid).eq('episode_id', episodeId);
+    return;
+  }
+  await supabase.from('episode_reactions').upsert(
+    { user_id: uid, episode_id: episodeId, show_id: showId, emoji, body },
+    { onConflict: 'user_id,episode_id' },
+  );
+}
+
+/* ---------------- Activity likes + comments ---------------- */
+
+export interface ActivitySocial {
+  likes: number;
+  likedByMe: boolean;
+  comments: ActivityComment[];
+}
+export interface ActivityComment {
+  id: string;
+  profile: Profile;
+  body: string;
+  createdAt: number;
+  mine: boolean;
+}
+
+/** Likes + comments for a batch of activities (keyed by activity_id). */
+export async function activitySocial(activityIds: string[]): Promise<Map<string, ActivitySocial>> {
+  const out = new Map<string, ActivitySocial>();
+  if (!supabase || activityIds.length === 0) return out;
+  const uid = await myId();
+  for (const id of activityIds) out.set(id, { likes: 0, likedByMe: false, comments: [] });
+
+  const [likesRes, commentsRes] = await Promise.all([
+    supabase.from('activity_likes').select('activity_id, actor_id').in('activity_id', activityIds),
+    supabase.from('activity_comments').select('id, activity_id, actor_id, body, created_at').in('activity_id', activityIds).order('created_at', { ascending: true }),
+  ]);
+
+  const actorIds = new Set<string>();
+  for (const r of commentsRes.data ?? []) actorIds.add(r.actor_id as string);
+  const { data: profs } = actorIds.size
+    ? await supabase.from('profiles').select('*').in('id', [...actorIds])
+    : { data: [] as ProfileRow[] };
+  const byId = new Map((profs ?? []).map((p) => [p.id as string, toProfile(p as ProfileRow)]));
+
+  for (const r of likesRes.data ?? []) {
+    const e = out.get(r.activity_id as string)!;
+    e.likes += 1;
+    if (r.actor_id === uid) e.likedByMe = true;
+  }
+  for (const r of commentsRes.data ?? []) {
+    const e = out.get(r.activity_id as string);
+    const profile = byId.get(r.actor_id as string);
+    if (!e || !profile) continue;
+    e.comments.push({ id: r.id as string, profile, body: r.body as string, createdAt: Number(r.created_at), mine: r.actor_id === uid });
+  }
+  return out;
+}
+
+export async function likeActivity(activityId: string, ownerId: string): Promise<void> {
+  if (!supabase) return;
+  const uid = await myId();
+  if (!uid) return;
+  await supabase.from('activity_likes').insert({ actor_id: uid, activity_id: activityId, owner_id: ownerId });
+}
+export async function unlikeActivity(activityId: string): Promise<void> {
+  if (!supabase) return;
+  const uid = await myId();
+  if (!uid) return;
+  await supabase.from('activity_likes').delete().eq('actor_id', uid).eq('activity_id', activityId);
+}
+export async function commentActivity(activityId: string, ownerId: string, body: string): Promise<ActivityComment | null> {
+  if (!supabase) return null;
+  const uid = await myId();
+  if (!uid) return null;
+  const text = body.trim();
+  if (!text) return null;
+  const { data, error } = await supabase
+    .from('activity_comments')
+    .insert({ actor_id: uid, activity_id: activityId, owner_id: ownerId, body: text })
+    .select('id, created_at')
+    .maybeSingle();
+  if (error || !data) return null;
+  const me = await getMyProfile();
+  if (!me) return null;
+  return { id: data.id as string, profile: me, body: text, createdAt: Number(data.created_at), mine: true };
+}
+export async function deleteComment(id: string): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('activity_comments').delete().eq('id', id);
+}
+
 export interface FeedItem {
   id: string;
   user: Profile;

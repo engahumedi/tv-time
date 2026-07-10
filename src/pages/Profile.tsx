@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -39,6 +39,11 @@ import { MovieCard } from '../components/MovieCard';
 import { NewListModal } from '../components/NewListModal';
 import { FollowStats } from '../components/FollowStats';
 import { getMyProfile } from '../lib/social';
+import { Share2 } from 'lucide-react';
+
+const ShareProfileModal = lazy(() =>
+  import('../components/ShareProfileModal').then((m) => ({ default: m.ShareProfileModal })),
+);
 
 const GOLD = '#c9a24b';
 const GOLD_DIM = 'rgba(201,162,75,0.32)';
@@ -70,6 +75,7 @@ export function Profile() {
   );
   const badges = useMemo(() => (stats ? computeBadges(stats) : []), [stats]);
   const [creatingList, setCreatingList] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -122,9 +128,16 @@ export function Profile() {
           <div className="pb-1">
             <h1 className="text-2xl font-semibold leading-tight">{name}</h1>
             {user && <div className="mt-1"><FollowStats userId={user.id} isMe /></div>}
-            <Link to="/settings" className="text-sm text-gold hover:underline">
-              {t('settings.title')}
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link to="/settings" className="text-sm text-gold hover:underline">
+                {t('settings.title')}
+              </Link>
+              {user && (
+                <button onClick={() => setSharing(true)} className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
+                  <Share2 size={14} strokeWidth={1.9} /> {t('profile.share')}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -347,6 +360,11 @@ export function Profile() {
       </div>
 
       {creatingList && <NewListModal onClose={() => setCreatingList(false)} />}
+      {sharing && user && (
+        <Suspense fallback={null}>
+          <ShareProfileModal userId={user.id} onClose={() => setSharing(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

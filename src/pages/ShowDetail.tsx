@@ -31,6 +31,7 @@ import { Poster } from '../components/Poster';
 import { StatusBadge } from '../components/StatusBadge';
 import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
+import { WhereToWatch } from '../components/WhereToWatch';
 import { EpisodeModal } from '../components/EpisodeModal';
 import { EpisodeRatingGraph } from '../components/EpisodeRatingGraph';
 import { ShowExtras } from '../components/ShowExtras';
@@ -373,6 +374,10 @@ export function ShowDetail() {
             </p>
           </section>
         )}
+
+        <div className="mt-6">
+          <WhereToWatch kind="tv" id={showId} />
+        </div>
 
         {inLibrary && totalCount > 0 && (
           <button

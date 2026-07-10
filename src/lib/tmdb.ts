@@ -500,3 +500,56 @@ export async function getMovieDetail(id: number): Promise<Movie> {
     addedAt: Date.now(),
   };
 }
+
+export interface WatchProvider {
+  id: number;
+  name: string;
+  logo: string | null;
+}
+
+interface ProviderEntry {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+}
+interface ProvidersResponse {
+  results: Record<string, { link?: string; flatrate?: ProviderEntry[]; free?: ProviderEntry[]; ads?: ProviderEntry[] }>;
+}
+
+/** Preferred provider region for the current UI language. */
+function providerRegion(): string {
+  try {
+    return localStorage.getItem('showtrack:lang') === 'ar' ? 'SA' : 'US';
+  } catch {
+    return 'US';
+  }
+}
+
+/**
+ * "Where to watch" — streaming (flatrate/free/ads) providers for a title in the
+ * user's region, falling back to US then any available country. Returns a link
+ * to the TMDB watch page too (deep links need JustWatch attribution).
+ */
+export async function getWatchProviders(
+  kind: 'tv' | 'movie',
+  id: number,
+): Promise<{ link: string | null; providers: WatchProvider[] }> {
+  if (!hasTmdbKey) return { link: null, providers: [] };
+  let data: ProvidersResponse;
+  try {
+    data = await tmdb<ProvidersResponse>(`/${kind}/${id}/watch/providers`);
+  } catch {
+    return { link: null, providers: [] };
+  }
+  const results = data.results || {};
+  const region = providerRegion();
+  const entry = results[region] || results.US || results[Object.keys(results)[0]] || {};
+  const seen = new Set<number>();
+  const providers: WatchProvider[] = [];
+  for (const p of [...(entry.flatrate ?? []), ...(entry.free ?? []), ...(entry.ads ?? [])]) {
+    if (seen.has(p.provider_id)) continue;
+    seen.add(p.provider_id);
+    providers.push({ id: p.provider_id, name: p.provider_name, logo: p.logo_path });
+  }
+  return { link: entry.link ?? null, providers };
+}

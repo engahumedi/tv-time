@@ -334,3 +334,83 @@ create policy "avatar owner update" on storage.objects for update
 drop policy if exists "avatar owner delete" on storage.objects;
 create policy "avatar owner delete" on storage.objects for delete
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+-- ============================================================
+-- Social layer v4: episode reactions + activity likes/comments
+-- ============================================================
+
+-- Stamp created_at (ms) server-side so we never trust the client for ordering.
+create or replace function public.stamp_created_at()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  new.created_at := (extract(epoch from now()) * 1000)::bigint;
+  return new;
+end;
+$$;
+
+-- 1) Per-user reaction/comment on a specific episode (one per user per episode).
+create table if not exists public.episode_reactions (
+  user_id    uuid   not null references auth.users (id) on delete cascade,
+  episode_id text   not null,
+  show_id    bigint not null,
+  emoji      text,
+  body       text,
+  created_at bigint not null default 0,
+  primary key (user_id, episode_id)
+);
+create index if not exists episode_reactions_ep_idx on public.episode_reactions (episode_id);
+alter table public.episode_reactions enable row level security;
+drop trigger if exists episode_reactions_stamp on public.episode_reactions;
+create trigger episode_reactions_stamp before insert on public.episode_reactions
+  for each row execute function public.stamp_created_at();
+drop policy if exists "reactions viewable" on public.episode_reactions;
+create policy "reactions viewable" on public.episode_reactions for select using (public.can_view(user_id));
+drop policy if exists "own reaction insert" on public.episode_reactions;
+create policy "own reaction insert" on public.episode_reactions for insert with check (user_id = auth.uid());
+drop policy if exists "own reaction update" on public.episode_reactions;
+create policy "own reaction update" on public.episode_reactions for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "own reaction delete" on public.episode_reactions;
+create policy "own reaction delete" on public.episode_reactions for delete using (user_id = auth.uid());
+
+-- 2) Likes on a feed activity. activity_id is an opaque client string; owner_id
+--    is the person whose activity it is, so RLS can gate by can_view(owner).
+create table if not exists public.activity_likes (
+  actor_id    uuid not null references auth.users (id) on delete cascade,
+  activity_id text not null,
+  owner_id    uuid not null references auth.users (id) on delete cascade,
+  created_at  bigint not null default 0,
+  primary key (actor_id, activity_id)
+);
+create index if not exists activity_likes_act_idx on public.activity_likes (activity_id);
+alter table public.activity_likes enable row level security;
+drop trigger if exists activity_likes_stamp on public.activity_likes;
+create trigger activity_likes_stamp before insert on public.activity_likes
+  for each row execute function public.stamp_created_at();
+drop policy if exists "likes viewable" on public.activity_likes;
+create policy "likes viewable" on public.activity_likes for select using (public.can_view(owner_id));
+drop policy if exists "own like insert" on public.activity_likes;
+create policy "own like insert" on public.activity_likes for insert
+  with check (actor_id = auth.uid() and public.can_view(owner_id));
+drop policy if exists "own like delete" on public.activity_likes;
+create policy "own like delete" on public.activity_likes for delete using (actor_id = auth.uid());
+
+-- 3) Comments on a feed activity.
+create table if not exists public.activity_comments (
+  id          uuid primary key default gen_random_uuid(),
+  actor_id    uuid not null references auth.users (id) on delete cascade,
+  activity_id text not null,
+  owner_id    uuid not null references auth.users (id) on delete cascade,
+  body        text not null,
+  created_at  bigint not null default 0
+);
+create index if not exists activity_comments_act_idx on public.activity_comments (activity_id);
+alter table public.activity_comments enable row level security;
+drop trigger if exists activity_comments_stamp on public.activity_comments;
+create trigger activity_comments_stamp before insert on public.activity_comments
+  for each row execute function public.stamp_created_at();
+drop policy if exists "comments viewable" on public.activity_comments;
+create policy "comments viewable" on public.activity_comments for select using (public.can_view(owner_id));
+drop policy if exists "own comment insert" on public.activity_comments;
+create policy "own comment insert" on public.activity_comments for insert
+  with check (actor_id = auth.uid() and public.can_view(owner_id));
+drop policy if exists "own comment delete" on public.activity_comments;
+create policy "own comment delete" on public.activity_comments for delete using (actor_id = auth.uid());
