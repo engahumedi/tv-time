@@ -192,15 +192,21 @@ export function UserProfile() {
               onToggle={() => setAllShared((v) => !v)}
             >
               {allShared ? (
-                <div className="space-y-3">
+                <div className="space-y-6">
                   {sharedShows.length > 0 && (
-                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-                      {sharedShows.map((s) => <ShowCard key={s.id} show={s} />)}
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gold">{t('profile.series')}</h3>
+                      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                        {sharedShows.map((s) => <ShowCard key={s.id} show={s} />)}
+                      </div>
                     </div>
                   )}
                   {sharedMovies.length > 0 && (
-                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-                      {sharedMovies.map((m) => <MovieCard key={m.id} movie={m} />)}
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gold">{t('profile.movies')}</h3>
+                      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                        {sharedMovies.map((m) => <MovieCard key={m.id} movie={m} />)}
+                      </div>
                     </div>
                   )}
                 </div>
