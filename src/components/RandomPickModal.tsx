@@ -99,10 +99,10 @@ export function RandomPickModal({ onClose }: { onClose: () => void }) {
 
         {/* Genre chips */}
         {genres.length > 0 && (
-          <div className="no-scrollbar mb-4 -mx-6 flex gap-1.5 overflow-x-auto px-6">
+          <div className="no-scrollbar mb-4 flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
             <button
               onClick={() => setGenreId(null)}
-              className={`chip shrink-0 ${genreId === null ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30' : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'}`}
+              className={`chip ${genreId === null ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30' : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'}`}
             >
               {t('random.any_genre')}
             </button>
@@ -110,7 +110,7 @@ export function RandomPickModal({ onClose }: { onClose: () => void }) {
               <button
                 key={g.id}
                 onClick={() => setGenreId(g.id)}
-                className={`chip shrink-0 ${genreId === g.id ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30' : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'}`}
+                className={`chip ${genreId === g.id ? 'bg-gold/12 text-gold ring-1 ring-inset ring-gold/30' : 'text-muted hover:bg-overlay/[0.05] hover:text-fg'}`}
               >
                 {g.name}
               </button>
