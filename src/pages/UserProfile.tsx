@@ -14,10 +14,11 @@ import {
   type FollowStatus,
   type FriendData,
 } from '../lib/social';
-import { computeStats, breakdownTime } from '../lib/stats';
-import { formatNumber } from '../lib/format';
+import { computeStats } from '../lib/stats';
+import { useLibrary, useMovies } from '../lib/hooks';
 import { ShowCard } from '../components/ShowCard';
 import { MovieCard } from '../components/MovieCard';
+import { ProfileStats } from '../components/ProfileStats';
 import { Avatar } from './People';
 import { FollowStats } from '../components/FollowStats';
 import type { Profile } from '../types';
@@ -34,6 +35,12 @@ export function UserProfile() {
   const [iBlocked, setIBlocked] = useState(false);
   const [data, setData] = useState<FriendData | null>(null);
   const [busy, setBusy] = useState(false);
+  const [allShows, setAllShows] = useState(false);
+  const [allMovies, setAllMovies] = useState(false);
+
+  // My own library, to compute what we've both watched.
+  const myShows = useLibrary();
+  const myMovies = useMovies();
 
   const canView = !iBlocked && (isMe || targetPublic || status === 'accepted');
 
@@ -103,10 +110,16 @@ export function UserProfile() {
   }
 
   const stats = data ? computeStats(data.shows, data.watches) : null;
-  const time = stats ? breakdownTime(stats.totalMinutes) : null;
   const watchedMovies = (data?.movies ?? []).filter((m) => m.watched);
+  const movieMinutes = watchedMovies.reduce((a, m) => a + (m.runtime || 0), 0);
   const favShows = (data?.shows ?? []).filter((s) => s.favorite);
   const lang = i18n.language;
+
+  // Shows/movies we've both watched (only meaningful on someone else's profile).
+  const myShowIds = new Set((myShows ?? []).map((s) => s.id));
+  const myMovieIds = new Set((myMovies ?? []).filter((m) => m.watched).map((m) => m.id));
+  const sharedShows = isMe ? [] : (data?.shows ?? []).filter((s) => myShowIds.has(s.id));
+  const sharedMovies = isMe ? [] : watchedMovies.filter((m) => myMovieIds.has(m.id));
 
   return (
     <div className="mx-auto max-w-4xl pt-2">
@@ -156,14 +169,31 @@ export function UserProfile() {
         <div className="pt-10 text-center text-faint">{t('common.loading')}</div>
       ) : (
         <div className="space-y-8">
-          {/* Stats */}
-          {stats && time && (
-            <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat value={formatNumber(stats.totalEpisodes, lang)} label={t('profile.episodes_watched')} />
-              <Stat value={formatNumber(stats.totalShows, lang)} label={t('profile.shows_watched')} />
-              <Stat value={formatNumber(watchedMovies.length, lang)} label={t('profile.movies_watched')} />
-              <Stat value={`${formatNumber(time.days, lang)}${t('common.days').charAt(0)}`} label={t('profile.time_watched')} />
+          {/* Stats — same layout as your own profile */}
+          {stats && (
+            <section>
+              <h2 className="mb-4 text-xl font-semibold">{t('profile.stats')}</h2>
+              <ProfileStats
+                stats={stats}
+                watchedMovies={watchedMovies.length}
+                movieMinutes={movieMinutes}
+                lang={lang}
+              />
             </section>
+          )}
+
+          {/* Watched in common */}
+          {(sharedShows.length > 0 || sharedMovies.length > 0) && (
+            <Section title={t('people.in_common')}>
+              {sharedShows.length > 0 && (
+                <PosterRow>{sharedShows.map((s) => <div key={s.id} className="w-28 shrink-0"><ShowCard show={s} /></div>)}</PosterRow>
+              )}
+              {sharedMovies.length > 0 && (
+                <div className={sharedShows.length > 0 ? 'mt-3' : ''}>
+                  <PosterRow>{sharedMovies.map((m) => <div key={m.id} className="w-28 shrink-0"><MovieCard movie={m} /></div>)}</PosterRow>
+                </div>
+              )}
+            </Section>
           )}
 
           {favShows.length > 0 && (
@@ -173,15 +203,37 @@ export function UserProfile() {
           )}
 
           {data.shows.length > 0 && (
-            <Section title={t('discover.in_library')}>
-              <PosterRow>{data.shows.map((s) => <div key={s.id} className="w-28 shrink-0"><ShowCard show={s} /></div>)}</PosterRow>
-            </Section>
+            <Shelf
+              title={t('discover.in_library')}
+              expandable={data.shows.length > 6}
+              expanded={allShows}
+              onToggle={() => setAllShows((v) => !v)}
+            >
+              {allShows ? (
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                  {data.shows.map((s) => <ShowCard key={s.id} show={s} />)}
+                </div>
+              ) : (
+                <PosterRow>{data.shows.map((s) => <div key={s.id} className="w-28 shrink-0"><ShowCard show={s} /></div>)}</PosterRow>
+              )}
+            </Shelf>
           )}
 
           {watchedMovies.length > 0 && (
-            <Section title={t('profile.your_movies')}>
-              <PosterRow>{watchedMovies.map((m) => <div key={m.id} className="w-28 shrink-0"><MovieCard movie={m} /></div>)}</PosterRow>
-            </Section>
+            <Shelf
+              title={t('profile.your_movies')}
+              expandable={watchedMovies.length > 6}
+              expanded={allMovies}
+              onToggle={() => setAllMovies((v) => !v)}
+            >
+              {allMovies ? (
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                  {watchedMovies.map((m) => <MovieCard key={m.id} movie={m} />)}
+                </div>
+              ) : (
+                <PosterRow>{watchedMovies.map((m) => <div key={m.id} className="w-28 shrink-0"><MovieCard movie={m} /></div>)}</PosterRow>
+              )}
+            </Shelf>
           )}
 
           {data.lists.length > 0 && (
@@ -215,19 +267,40 @@ function FollowButton({ status, busy, onClick }: { status: FollowStatus; busy: b
   return <button onClick={onClick} disabled={busy} className="btn-gold shrink-0 text-sm"><UserPlus size={16} strokeWidth={2} />{t('people.follow')}</button>;
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-lg border border-overlay/[0.08] bg-navy-800 p-3.5">
-      <p className="font-display text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-[11px] text-muted">{label}</p>
-    </div>
-  );
-}
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
       <h2 className="mb-3 text-xl font-semibold">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+/** A titled shelf with an optional "See all" toggle to expand into a grid. */
+function Shelf({
+  title,
+  expandable,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  expandable: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        {expandable && (
+          <button onClick={onToggle} className="shrink-0 text-sm font-semibold text-gold hover:underline">
+            {expanded ? t('common.show_less') : t('common.seeAll')}
+          </button>
+        )}
+      </div>
       {children}
     </section>
   );
