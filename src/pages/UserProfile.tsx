@@ -37,6 +37,7 @@ export function UserProfile() {
   const [busy, setBusy] = useState(false);
   const [allShows, setAllShows] = useState(false);
   const [allMovies, setAllMovies] = useState(false);
+  const [allShared, setAllShared] = useState(false);
 
   // My own library, to compute what we've both watched.
   const myShows = useLibrary();
@@ -184,16 +185,38 @@ export function UserProfile() {
 
           {/* Watched in common */}
           {(sharedShows.length > 0 || sharedMovies.length > 0) && (
-            <Section title={t('people.in_common')}>
-              {sharedShows.length > 0 && (
-                <PosterRow>{sharedShows.map((s) => <div key={s.id} className="w-28 shrink-0"><ShowCard show={s} /></div>)}</PosterRow>
-              )}
-              {sharedMovies.length > 0 && (
-                <div className={sharedShows.length > 0 ? 'mt-3' : ''}>
-                  <PosterRow>{sharedMovies.map((m) => <div key={m.id} className="w-28 shrink-0"><MovieCard movie={m} /></div>)}</PosterRow>
+            <Shelf
+              title={t('people.in_common')}
+              expandable={sharedShows.length + sharedMovies.length > 6}
+              expanded={allShared}
+              onToggle={() => setAllShared((v) => !v)}
+            >
+              {allShared ? (
+                <div className="space-y-3">
+                  {sharedShows.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                      {sharedShows.map((s) => <ShowCard key={s.id} show={s} />)}
+                    </div>
+                  )}
+                  {sharedMovies.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+                      {sharedMovies.map((m) => <MovieCard key={m.id} movie={m} />)}
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <>
+                  {sharedShows.length > 0 && (
+                    <PosterRow>{sharedShows.map((s) => <div key={s.id} className="w-28 shrink-0"><ShowCard show={s} /></div>)}</PosterRow>
+                  )}
+                  {sharedMovies.length > 0 && (
+                    <div className={sharedShows.length > 0 ? 'mt-3' : ''}>
+                      <PosterRow>{sharedMovies.map((m) => <div key={m.id} className="w-28 shrink-0"><MovieCard movie={m} /></div>)}</PosterRow>
+                    </div>
+                  )}
+                </>
               )}
-            </Section>
+            </Shelf>
           )}
 
           {favShows.length > 0 && (
@@ -204,7 +227,7 @@ export function UserProfile() {
 
           {data.shows.length > 0 && (
             <Shelf
-              title={t('discover.in_library')}
+              title={t('people.their_shows', { name: profile.displayName })}
               expandable={data.shows.length > 6}
               expanded={allShows}
               onToggle={() => setAllShows((v) => !v)}
@@ -221,7 +244,7 @@ export function UserProfile() {
 
           {watchedMovies.length > 0 && (
             <Shelf
-              title={t('profile.your_movies')}
+              title={t('people.their_movies', { name: profile.displayName })}
               expandable={watchedMovies.length > 6}
               expanded={allMovies}
               onToggle={() => setAllMovies((v) => !v)}

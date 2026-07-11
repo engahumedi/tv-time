@@ -46,6 +46,8 @@ export const ar: Translation = {
     feed_empty_title: 'لا يوجد نشاط بعد',
     feed_empty_body: 'تابِع أشخاصًا لترى وش يتفرّجون هنا.',
     in_common: 'شاهدتماها معًا',
+    their_shows: 'مسلسلات {{name}}',
+    their_movies: 'أفلام {{name}}',
     feed_watched_episode: 'تابع حلقة',
     feed_watched_movie: 'شاهد فيلمًا',
     comment_placeholder: 'اكتب تعليقًا…',

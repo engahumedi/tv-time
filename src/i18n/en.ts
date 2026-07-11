@@ -44,6 +44,8 @@ export const en = {
     feed_empty_title: 'No activity yet',
     feed_empty_body: 'Follow people to see what they’re watching here.',
     in_common: 'You both watched',
+    their_shows: '{{name}}’s shows',
+    their_movies: '{{name}}’s movies',
     feed_watched_episode: 'watched an episode',
     feed_watched_movie: 'watched a movie',
     comment_placeholder: 'Write a comment…',
