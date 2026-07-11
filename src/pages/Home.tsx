@@ -317,8 +317,17 @@ function UpcomingView({ lang }: { lang: string }) {
 }
 
 function UpcomingRow({ item, lang }: { item: CalendarItem; lang: string }) {
+  const { t } = useTranslation();
   const { show, episode, ts } = item;
   const thumb = img(episode.stillPath || show.backdropPath, 'w342');
+  const dayStart = new Date().setHours(0, 0, 0, 0);
+  const days = Math.round((new Date(ts).setHours(0, 0, 0, 0) - dayStart) / 864e5);
+  const countdown =
+    days <= 0
+      ? t('home.airs_today')
+      : days === 1
+        ? t('home.airs_tomorrow')
+        : t('home.airs_in_days', { n: days });
   return (
     <Link
       to={`/show/${show.id}`}
@@ -331,18 +340,31 @@ function UpcomingRow({ item, lang }: { item: CalendarItem; lang: string }) {
           <div className="h-full w-full" style={{ background: 'radial-gradient(120% 120% at 50% 0%, rgba(201,162,75,0.2), transparent 60%), #15131a' }} />
         )}
       </div>
-      <div className="min-w-0 flex-1 p-3">
-        <p className="truncate text-xs font-bold uppercase tracking-wide text-fg">
-          {show.name}
-        </p>
-        <p className="mt-1 text-base font-bold">
-          S{String(episode.seasonNumber).padStart(2, '0')} | E
-          {String(episode.episodeNumber).padStart(2, '0')}
-        </p>
-        <p className="truncate text-sm text-muted">{episode.name}</p>
-        <p className="mt-1 text-xs font-semibold text-gold">
-          {formatDate(ts, lang)}
-        </p>
+      <div className="flex min-w-0 flex-1 items-center gap-2 p-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold uppercase tracking-wide text-fg">
+            {show.name}
+          </p>
+          <p className="mt-1 text-base font-bold">
+            S{String(episode.seasonNumber).padStart(2, '0')} | E
+            {String(episode.episodeNumber).padStart(2, '0')}
+          </p>
+          <p className="truncate text-sm text-muted">{episode.name}</p>
+          <p className="mt-1 text-xs font-semibold text-gold">
+            {formatDate(ts, lang)}
+          </p>
+        </div>
+        {/* Days-until countdown */}
+        <div className="flex shrink-0 flex-col items-center rounded-xl bg-gold/12 px-3 py-1.5 text-gold ring-1 ring-inset ring-gold/25">
+          {days <= 1 ? (
+            <span className="text-sm font-bold leading-tight">{countdown}</span>
+          ) : (
+            <>
+              <span className="font-display text-xl font-bold leading-none tabular-nums">{days}</span>
+              <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide">{t('home.days_left')}</span>
+            </>
+          )}
+        </div>
       </div>
     </Link>
   );
