@@ -68,6 +68,21 @@ const COLUMN_ALIASES = {
   // Some newer exports encode everything in one "episode label" like
   // "S01E04" alongside the series name.
   episodeLabel: ['episode_label', 'label', 'code'],
+  // An explicit watch/re-watch count, when the export stores one row per
+  // episode with a tally instead of one row per watch.
+  plays: [
+    'plays',
+    'play_count',
+    'watch_count',
+    'watched_count',
+    'watches_count',
+    'number_of_watches',
+    'number_of_plays',
+    'times_watched',
+    'rewatch_count',
+    'rewatches',
+    'view_count',
+  ],
 } as const;
 
 type Field = keyof typeof COLUMN_ALIASES;
@@ -159,6 +174,7 @@ export function parseCsv(text: string, sourceFile: string): ParsedWatch[] {
     // A row with neither a name nor an id can't be matched later — skip it.
     if (!seriesName && !seriesExternalId) continue;
 
+    const plays = cols.plays ? parseInt2(row[cols.plays]) : null;
     rows.push({
       seriesName: seriesName || `Series ${seriesExternalId}`,
       seriesExternalId,
@@ -166,6 +182,7 @@ export function parseCsv(text: string, sourceFile: string): ParsedWatch[] {
       episodeNumber: episode,
       episodeName: cols.episodeName ? row[cols.episodeName]?.trim() : undefined,
       watchedAt: cols.watchedAt ? parseDate(row[cols.watchedAt]) : null,
+      plays: plays && plays > 1 ? plays : null,
       sourceFile,
     });
   }

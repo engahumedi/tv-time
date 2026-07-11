@@ -29,6 +29,29 @@ describe('parseCsv — format auto-detection', () => {
     expect(rows[0].episodeNumber).toBe(4);
   });
 
+  it('reads an explicit watch-count column as plays', () => {
+    const csv = [
+      'series_name,season_number,episode_number,watch_count',
+      'The Wire,1,1,5',
+      'The Wire,1,2,1',
+    ].join('\n');
+    const rows = parseCsv(csv, 'seen_episode.csv');
+    expect(rows[0].plays).toBe(5);
+    expect(rows[1].plays).toBeNull();
+  });
+
+  it('keeps one row per watch event so re-watches can be counted', () => {
+    const csv = [
+      'series_name,season_number,episode_number,created_at',
+      'The Wire,1,1,2019-01-01',
+      'The Wire,1,1,2020-02-02',
+      'The Wire,1,1,2021-03-03',
+    ].join('\n');
+    const rows = parseCsv(csv, 'seen_episode.csv');
+    expect(rows).toHaveLength(3);
+    expect(rows.every((r) => r.episodeNumber === 1)).toBe(true);
+  });
+
   it('parses an SxxExx episode label when season/episode columns are absent', () => {
     const csv = ['series,code,timestamp', 'The Office,S03E12,1622548800'].join(
       '\n',

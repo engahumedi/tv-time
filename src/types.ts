@@ -137,6 +137,8 @@ export interface ParsedWatch {
   episodeNumber: number | null;
   episodeName?: string;
   watchedAt: number | null;
+  /** Explicit watch/re-watch count from the export, when a column provides it. */
+  plays?: number | null;
   /** The raw source filename this row came from (for diagnostics). */
   sourceFile: string;
 }

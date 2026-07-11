@@ -142,14 +142,18 @@ function buildWatchRecords(
   // Collapse re-watches: one record per episode, keeping the earliest date, but
   // remember how many times it was watched so re-watches carry over from TV Time.
   const byEpisode = new Map<string, WatchRecord>();
-  const counts = new Map<string, number>();
+  const rowCounts = new Map<string, number>();
+  const explicit = new Map<string, number>();
   for (const w of group.watches) {
     if (w.episodeNumber === null) continue;
     const key = `${w.seasonNumber}:${w.episodeNumber}`;
     const ep = byKey.get(key);
     const id = episodeId(show.id, w.seasonNumber ?? 1, w.episodeNumber);
     const watchedAt = w.watchedAt ?? Date.now();
-    counts.set(id, (counts.get(id) ?? 0) + 1);
+    rowCounts.set(id, (rowCounts.get(id) ?? 0) + 1);
+    if (w.plays && w.plays > 0) {
+      explicit.set(id, Math.max(explicit.get(id) ?? 0, w.plays));
+    }
     const record: WatchRecord = {
       episodeId: id,
       showId: show.id,
@@ -163,7 +167,9 @@ function buildWatchRecords(
     if (!prev || record.watchedAt < prev.watchedAt) byEpisode.set(id, record);
   }
   return [...byEpisode.values()].map((r) => {
-    const n = counts.get(r.episodeId) ?? 1;
+    // Truest count available: whichever is larger of how many rows referenced
+    // the episode and any explicit tally column the export provided.
+    const n = Math.max(rowCounts.get(r.episodeId) ?? 1, explicit.get(r.episodeId) ?? 1);
     return n > 1 ? { ...r, plays: n } : r;
   });
 }
