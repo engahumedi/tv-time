@@ -20,11 +20,24 @@ history over.
 - **Repo:** `engahumedi/tv-time`
 - **Working branch:** `claude/showtrack-tv-tracker-27fepl` — this is the **only** branch on the remote and the **default** branch; GitHub Pages deploys directly from it (see `.github/workflows/deploy-pages.yml`). There is no separate `main`, so there's currently no PR (a base branch would have to be created first).
 - **Live site (GitHub Pages):** https://engahumedi.github.io/tv-time/
-- **Latest commit:** `2c18ccd` (Performance: split vendor chunks, preconnect CDNs, async image decoding)
+- **Latest commit:** `019d70c` (Import: count re-watches truthfully and idempotently)
 
-> **What changed since the original handoff:** a large batch of features + fixes
-> was added — see **§13 "What's new"** at the end for the full, current list.
-> Sections below are kept up to date inline too.
+> **What changed since the original handoff:** two large batches were added on
+> top of §13 — (a) a full **social layer** (public profiles, follow-with-
+> approval, feed, episode reactions, likes/comments, notifications, blocking,
+> avatars, profile sharing) plus **onboarding, accent themes, account deletion**;
+> and (b) **re-watches**, **avatar crop**, public-profile parity/polish, an
+> Upcoming **day-countdown**, and **desktop-width** fixes. **§14 "What's new (v2)"**
+> at the end has the complete current list; sections below are updated inline.
+
+> ⚠️ **Container/branch state gotcha (important):** this session's cloud sandbox
+> has twice reverted the working tree to a **stale older commit** on session
+> restart, even though the remote branch is far ahead. Your pushed work is safe
+> on the remote. **On a fresh session, always run
+> `git fetch origin claude/showtrack-tv-tracker-27fepl` and
+> `git reset --hard origin/claude/showtrack-tv-tracker-27fepl`, then `npm install`
+> (newer deps like `qrcode` won't be present) before building.** Verify with
+> `git log --oneline -1` that HEAD matches the latest commit above.
 
 The owner communicates in **Arabic**; reply in Arabic by default.
 
@@ -102,7 +115,10 @@ src/
     match.ts              normalizeTitle/titleSimilarity/bestMatch + AUTO_MATCH_THRESHOLD (0.72).
     stats.ts              computeStats (episodes/time/genres + perWeekday, currentStreak/longestStreak, averageRating,
                           ratedEpisodes, completionRate), computeBadges (milestones), breakdownTime.
-    settings.ts           theme + display name (localStorage) helpers.
+    settings.ts           theme + accent colour + display name (localStorage) helpers (ACCENTS palette).
+    social.ts             Social layer: getMyProfile/saveMyProfile, getProfile/getRelation/getUserData,
+                          follow/unfollow/block/unblock, uploadAvatar, follower/following counts, reactions,
+                          feed likes/comments, notifications, searchProfiles. All Supabase + RLS.
     exporter.ts           Export library/history to JSON/CSV.
     format.ts, ids.ts, celebrate.ts, shareCard.ts, demoData.ts
 
@@ -112,10 +128,15 @@ src/
     Discover.tsx          TV Shows / Movies toggle; PERSISTENT search bar (no more Search tab); tabs Trending / Top / Filters;
                           Filters = genre + year + min-rating + sort (both kinds). ForYou rail on Trending. PersonModal.
     ShowDetail.tsx        Show page: ratings, seasons/episodes, status, favourite, /10 rating, tags, add-to-list, EpisodeRatingGraph, extras.
+                          Re-watches: fully-watched show button becomes "Watch whole show again" (rewatchShow); ×N badge per episode.
                           Renders from local cache even if the live fetch fails (offline-safe when in library).
     MovieDetail.tsx       Movie page (/movie/:id): TMDB+IMDb, watched toggle, want-to-watch (watchlist), favourite, /10, remove, add-to-list.
-    Profile.tsx           Profile: Series & Movies stat cards SIDE BY SIDE; streak/avg-rating/completion highlights; weekday chart;
-                          lists (inline create), favourites, library rows w/ "see all" -> /library, charts, milestones, Year in Review.
+    Profile.tsx           Your profile: avatar + @username; Series & Movies stat cards SIDE BY SIDE; streak/avg-rating/completion;
+                          weekday chart; lists (inline create), favourites, "Series"/"Movies" shelves w/ "see all" -> /library, share.
+    People.tsx            /people — search profiles, follow requests, connections, activity feed. Exports the shared <Avatar>.
+    UserProfile.tsx       /u/:id — another user's public profile: follow/approve, block; stats via shared <ProfileStats>;
+                          See-all library shelves ("<name>'s shows/movies"); "You both watched" (in-common) section.
+    Notifications.tsx     /notifications — follows, request-accepts, likes/comments/reactions, new-episode alerts.
     Library.tsx           /library — full searchable/sortable/filterable grid of ALL shows (LibraryGrid) or movies; ?tab=movies.
     Lists.tsx             My Lists (TV Shows / Movies toggle). Inline create (NewListModal); per-list add items (ListItemsModal)
                           + remove item; empty-state CTA.
@@ -126,14 +147,20 @@ src/
     ManualMatchModal.tsx  Manual show matching during import.
     (Calendar.tsx was added then REMOVED — it duplicated Home's Upcoming tab.)
 
-  components/  Layout, Sidebar, BottomNav (Home·Discover·Profile), Welcome (auth-only, no guest), AuthForm (Google + email),
-               EmptyState, ShowCard, MovieCard (watched + bookmark), Rating, StarRating, Poster (lazy/async),
-               EpisodeModal, EpisodeRatingGraph, LibraryGrid (search/sort/filter/bulk-select), ForYou (recs),
-               RandomPickModal (movie roulette), NewListModal, ListItemsModal, BulkListModal,
+  components/  Layout (responsive shell; wide desktop max-width), Sidebar, BottomNav (Home·Discover·People·Profile),
+               Welcome (auth-only), AuthForm (Google + email), Onboarding (first-run), EmptyState,
+               ShowCard, MovieCard (watched + bookmark), Rating, StarRating, Poster (lazy/async),
+               EpisodeModal (rating, note, reactions, "Watch again"/×N re-watch controls), EpisodeReactions,
+               EpisodeRatingGraph, LibraryGrid (search/sort/filter/bulk-select), ForYou (recs — seeds only from
+               actually-watched shows), RandomPickModal (movie roulette; genre chips wrap on desktop),
+               ProfileStats (shared Series|Movies cards + highlights, used by Profile & UserProfile),
+               AvatarCropModal (crop/zoom/pan before upload), FollowStats, NotificationsBell, ShareProfileModal (QR),
+               WhereToWatch (streaming providers), NewListModal, ListItemsModal, BulkListModal,
                ListPickerModal (kind-aware), PersonCard/PersonModal, ShowExtras, TvTimeBanner, etc.
 
 supabase/
-  schema.sql              Run once in Supabase SQL editor: creates shows/watches/lists/movies + RLS policies.
+  schema.sql              Run once in Supabase SQL editor: shows/watches(+plays)/lists/movies + social tables
+                          (profiles/follows/blocks/reactions/likes/comments/notifications) + RLS + SECURITY DEFINER fns.
   functions/api/index.ts  Edge Function proxy (Deno): adds TMDB/OMDb keys server-side + caches responses (edge + browser),
                           never caches errors. Deploy via Management API PATCH /v1/projects/{ref}/functions/api (JSON body:
                           {body: source, verify_jwt:false}) — use curl, not python-urllib (Cloudflare blocks its UA).
@@ -146,14 +173,25 @@ supabase/
 ### Local (Dexie — `src/lib/db.ts`)
 - `shows` (key `id`) — followed TV shows.
 - `episodes` (key `id = "showId:season:number"`) — episode cache (re-fetched from TMDB; not synced).
-- `watches` (key `episodeId`) — a watch record per episode (dedup by episode id); has rating (1–5) + note.
+- `watches` (key `episodeId`) — a watch record per episode (dedup by episode id); has rating (1–5) + note + **`plays`** (re-watch count; absent = 1).
 - `lists` (key `id`) — user collections. Field `kind: 'show' | 'movie'` (default 'show'); `showIds` holds show OR movie ids per kind.
 - `movies` (key `id`) — movies: `{ watched, watchedAt, watchlist (want-to-watch), userRating (1–10), favorite, runtime, ... }`.
 
 ### Cloud (Supabase — `supabase/schema.sql`)
 Per-user tables with Row-Level-Security (each account sees only its own rows):
-`shows`, `watches`, `lists` (has a `kind` column), `movies`. Episodes are NOT
-synced (local cache, re-derivable from TMDB).
+`shows`, `watches` (has a `plays` column — added later, `alter table … add
+column if not exists`), `lists` (has a `kind` column), `movies`. Episodes are
+NOT synced (local cache, re-derivable from TMDB).
+
+**Social tables (added by the social layer, RLS-protected):** `profiles`
+(username [case-insensitive unique], display_name, avatar_url, is_public),
+`follows` (follower/followee + status pending/accepted, powers
+follow-with-approval), `blocks`, `episode_reactions`, `activity_likes`,
+`activity_comments`, and `notifications`. Avatars live in a Supabase **Storage**
+bucket. A visitor reads another user's `shows`/`watches`/`movies`/`lists`
+through RLS that allows it only when the target is public or the viewer is an
+accepted follower. Follower/following counts and connection lists come via
+`SECURITY DEFINER` SQL functions. All of this is in `supabase/schema.sql`.
 
 **Cloud sync design (`cloud.ts`):** every repo write calls a `cloud*` mirror
 (no-op when signed out / Supabase absent). On sign-in, `syncAfterLogin()` does a
@@ -235,7 +273,7 @@ counter**, then the clear "All done!" screen. `commitMovies` takes an
 
 ## 9. Testing & verification (how to check work locally)
 
-- **Unit tests:** `npm test` (vitest) — `importParser.test.ts`, `match.test.ts`, `stats.test.ts`. Keep them green.
+- **Unit tests:** `npm test` (vitest, currently **29**) — `importParser.test.ts`, `match.test.ts`, `stats.test.ts`. Keep them green.
 - **Build:** `npm run build` (tsc has `noUnusedLocals` — remove unused imports/vars).
 - **Browser/E2E:** Chromium is preinstalled at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`; global Playwright at `/opt/node22/lib/node_modules/playwright`. Import it in an `.mjs` script as:
   ```js
@@ -271,10 +309,10 @@ counter**, then the clear "All done!" screen. `commitMovies` takes an
 
 - **PWA** (installable + offline) — no `manifest`/service worker yet; strong low-effort win given the local-first design.
 - **"Continue watching"** rail on Home (next unwatched episode per active show).
-- **Email notifications** for new episodes (needs a Resend API key + Supabase Edge Function/cron).
+- **Email notifications** for new episodes (needs a Resend API key + Supabase Edge Function/cron) — in-app notifications already exist.
 - Extend `exporter.ts` to include **movies** in the JSON/CSV backup (currently shows only).
 - Movie **collections** (TMDB), movie **upcoming** surface, movie tags/notes, import of TV Time user lists (`lists-prod-lists.csv`).
-- (Done already: Google sign-in ✅, Discover filters ✅, movie watchlist ✅, vendor code-splitting ✅.)
+- (Done already: Google sign-in ✅, Discover filters ✅, movie watchlist ✅, vendor code-splitting ✅, social layer ✅, in-app notifications ✅, onboarding ✅, accent themes ✅, account deletion ✅, re-watches ✅.)
 
 ---
 
@@ -319,3 +357,27 @@ All built on `claude/showtrack-tv-tracker-27fepl`, each: `tsc + vite` build, `vi
 - Note: the sandbox **browser** can't reach Supabase (outbound blocked, same as TMDB), so the live sign-in→follow flow must be spot-checked on the deployed site; the data layer itself is proven by the server-side RLS tests.
 
 **Where things live now (quick index):** rating graph → ShowDetail; library search/bulk → Home grid + /library; movie watchlist → MovieCard/MovieDetail + Home Watchlist tab; recs → Discover (Trending); roulette → Home dice; filters + search → Discover; lists mgmt → Lists page; Google/auth → Welcome/AuthForm; caching → `supabase/functions/api/index.ts`; social → `lib/social.ts`, `People`/`UserProfile`, Settings privacy.
+
+---
+
+## 14. What's new (v2 — everything since §13)
+
+Same discipline: `tsc + vite` build + `vitest` (**29 tests**) + a Chromium/mock render check with 0 JS errors before each commit. (The live Supabase-dependent paths — sign-in, follow, avatar upload — can't run in the sandbox browser; verified by build + server-side checks + deploy.)
+
+**Social layer — completed (beyond the §13 basics)**
+- **Episode reactions** (`EpisodeReactions`) and an **activity feed** with **likes + comments** (`activity_likes`, `activity_comments`). Blocking (`blocks` + block/unblock, "you blocked this user" state). **Avatars** uploaded to a Storage bucket (see crop below). **Profile sharing** via `ShareProfileModal` (link + **QR**, `qrcode` dep). **Streaming providers** ("Where to watch", `WhereToWatch`) on show pages. **In-app notifications** (`Notifications.tsx` + `NotificationsBell`): follow requests, request-accepts, and likes/comments/reactions on your content, plus new-episode alerts. **Follower/following counts + connection lists** (`FollowStats`, SECURITY DEFINER SQL fns). **Discover "Popular with people you follow"** rail. Username uniqueness is **case-insensitive** at the DB.
+- **Onboarding** first-run flow (`Onboarding.tsx`), **accent-colour themes** (Settings → `ACCENTS` in `settings.ts`), and **account deletion** (`auth.deleteAccount` → Edge Function `DELETE /api/account`, wipes cloud + local).
+
+**This session's changes**
+- **Startup sync fix** (`auth.tsx`): a returning session now pulls cloud→local on app open, not only on a fresh `SIGNED_IN`. Fixes imported watches showing as unwatched / stale data on a device that was already logged in. De-duped via `syncingRef`.
+- **Avatar crop** (`AvatarCropModal`): pick a photo → circular crop with drag + zoom (wheel/slider/pinch), exports a 512×512 JPEG; then uploads. Source cap raised to 15 MB.
+- **@username** now shown on your own Profile (was only on others').
+- **Public profile parity/polish** (`UserProfile.tsx`): stats reuse the shared `ProfileStats` (Series|Movies cards + highlights) so a visitor sees the same layout as your own profile; library & movies shelves are **"See all"**-expandable (row → full grid) and titled **"<name>'s shows/movies"** (not "your"); new **"You both watched"** in-common section (also See-all, with Series/Movies sub-headings when expanded).
+- **Re-watches** (the big data-model change): `WatchRecord.plays` (+ cloud `watches.plays` column). `repo.rewatchEpisode` / `removeRewatch` / `rewatchShow`. EpisodeModal shows "Times watched ×N" with **Watch again** / remove; ShowDetail shows a ×N badge per episode and a **"Watch whole show again"** button when fully watched. `computeStats` counts each play toward episodes + minutes. Import carries re-watch counts from TV Time — `max(rows referencing the episode, explicit count column)` where the count column matches aliases like `watch_count`/`times_watched`/`plays`. `bulkImportWatches` merges by **max, not addition**, so re-uploading a file **corrects** a count and never doubles it (and backfills already-imported libraries without touching first-watch date/rating/note).
+- **Upcoming day-countdown** (`Home.tsx`): each upcoming episode shows a "N days left" badge (Today/Tomorrow for the nearest).
+- **"Because you watched X"** now seeds only from shows with **real watch history** (not ones merely added to the library/a watchlist).
+- **Desktop width**: app shell widened on large screens (`xl:max-w-7xl`, `2xl:110rem`) and Discover result grids reach 8 cols at `2xl`, so wide windows aren't mostly empty. **Surprise-me** genre chips now **wrap** instead of scrolling horizontally (were unreachable with a mouse).
+- **Profile shelves relabelled** "Series" / "Movies" (clearer than "In your library" / "Your movies"; Discover's in-library marker unchanged).
+- (A **preset-avatar gallery** was added and then **removed** at the owner's request — no longer in the code.)
+
+**Schema note:** `supabase/schema.sql` now includes `watches.plays` (idempotent `add column if not exists`); it was also applied to the live project via the Management API. All social tables were applied live earlier.
