@@ -386,29 +386,52 @@ function hasAired(airDate: string | null): boolean {
   return !Number.isNaN(d) && d <= Date.now();
 }
 
-/** Bulk-insert watches during import, skipping ones that already exist. */
+/**
+ * Bulk-insert watches during import. New episodes are inserted; episodes that
+ * already exist are not overwritten, except that a higher re-watch count from
+ * the file is backfilled onto them — so re-importing a TV Time export adds
+ * re-watches to an already-imported library without disturbing the user's
+ * first-watch date, rating or note.
+ */
 export async function bulkImportWatches(
   records: WatchRecord[],
 ): Promise<{ imported: number; duplicates: number; minutes: number }> {
   if (!records.length) return { imported: 0, duplicates: 0, minutes: 0 };
-  // Keep the earliest watchedAt when the same episode appears twice in a file.
+  // Collapse duplicates in the file: earliest watchedAt, highest play count.
   const deduped = new Map<string, WatchRecord>();
   for (const r of records) {
     const prev = deduped.get(r.episodeId);
-    if (!prev || r.watchedAt < prev.watchedAt) deduped.set(r.episodeId, r);
+    if (!prev) {
+      deduped.set(r.episodeId, r);
+    } else {
+      const base = r.watchedAt < prev.watchedAt ? r : prev;
+      const plays = Math.max(prev.plays ?? 1, r.plays ?? 1);
+      deduped.set(r.episodeId, { ...base, plays: plays > 1 ? plays : undefined });
+    }
   }
   const ids = [...deduped.keys()];
-  const existing = new Set(
-    (await db.watches.bulkGet(ids)).filter(Boolean).map((r) => r!.episodeId),
+  const existingById = new Map(
+    ((await db.watches.bulkGet(ids)).filter(Boolean) as WatchRecord[]).map((r) => [
+      r.episodeId,
+      r,
+    ]),
   );
-  const toInsert = [...deduped.values()].filter(
-    (r) => !existing.has(r.episodeId),
-  );
+  const toInsert: WatchRecord[] = [];
+  const toUpdate: WatchRecord[] = [];
+  for (const r of deduped.values()) {
+    const cur = existingById.get(r.episodeId);
+    if (!cur) {
+      toInsert.push(r);
+    } else if ((r.plays ?? 1) > (cur.plays ?? 1)) {
+      toUpdate.push({ ...cur, plays: r.plays });
+    }
+  }
   const duplicates = records.length - toInsert.length;
   const minutes = toInsert.reduce((a, r) => a + r.runtime, 0);
-  if (toInsert.length) {
-    await db.watches.bulkPut(toInsert);
-    void cloudUpsertWatches(toInsert);
+  const writes = [...toInsert, ...toUpdate];
+  if (writes.length) {
+    await db.watches.bulkPut(writes);
+    void cloudUpsertWatches(writes);
   }
   return { imported: toInsert.length, duplicates, minutes };
 }
