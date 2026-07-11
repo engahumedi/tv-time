@@ -243,14 +243,14 @@ export function Profile() {
 
           {/* Shows */}
           <section>
-            <SectionHeader label={t('discover.in_library')} to="/library" />
+            <SectionHeader label={t('profile.series')} to="/library" />
             <PosterRow shows={shows} />
           </section>
 
           {/* Movies */}
           {watchedMovies.length > 0 && (
             <section>
-              <SectionHeader label={t('profile.your_movies')} to="/library?tab=movies" />
+              <SectionHeader label={t('profile.movies')} to="/library?tab=movies" />
               <MoviePosterRow movies={watchedMovies} />
             </section>
           )}
