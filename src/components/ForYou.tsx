@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLibrary, useMovies } from '../lib/hooks';
+import { useLibrary, useMovies, useAllWatches } from '../lib/hooks';
 import {
   getRecommendations,
   getMovieRecommendations,
@@ -25,6 +25,7 @@ export function ForYou({ kind }: { kind: 'show' | 'movie' }) {
   const { t } = useTranslation();
   const library = useLibrary();
   const movies = useMovies();
+  const watches = useAllWatches();
   const [rails, setRails] = useState<Rail[]>([]);
 
   useEffect(() => {
@@ -36,8 +37,14 @@ export function ForYou({ kind }: { kind: 'show' | 'movie' }) {
       if (kind === 'show') {
         const lib = library ?? [];
         if (lib.length === 0) return;
+        // Only seed from shows actually watched (≥1 episode), not ones merely
+        // added to the library or a watchlist — otherwise we'd claim "because
+        // you watched X" for a show the user never started.
+        const watchedIds = new Set((watches ?? []).map((w) => w.showId));
+        const watchedLib = lib.filter((s) => watchedIds.has(s.id));
+        if (watchedLib.length === 0) return;
         const exclude = new Set(lib.map((s) => s.id));
-        const seeds = pickSeeds(lib, (s) => Boolean(s.favorite), (s) => s.id);
+        const seeds = pickSeeds(watchedLib, (s) => Boolean(s.favorite), (s) => s.id);
         const out: Rail[] = [];
         for (const seed of seeds) {
           try {
@@ -75,7 +82,7 @@ export function ForYou({ kind }: { kind: 'show' | 'movie' }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, library, movies]);
+  }, [kind, library, movies, watches]);
 
   if (rails.length === 0) return null;
 

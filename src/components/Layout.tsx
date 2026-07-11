@@ -52,7 +52,7 @@ export function Layout() {
       </header>
 
       <div className="lg:ps-60">
-        <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-2 lg:px-10 lg:pb-12 lg:pt-8">
+        <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-2 lg:px-10 lg:pb-12 lg:pt-8 xl:max-w-7xl 2xl:max-w-[110rem]">
           <Outlet />
         </main>
       </div>

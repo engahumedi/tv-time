@@ -317,7 +317,7 @@ export function Discover() {
       )}
 
       {!loading && kind === 'show' && results && results.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
           {results.map((s) => (
             <ShowCard key={s.id} show={s} subtitle={s.firstAirDate?.slice(0, 4)} />
           ))}
@@ -325,7 +325,7 @@ export function Discover() {
       )}
 
       {!loading && kind === 'movie' && movies && movies.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
           {movies.map((m) => (
             <MovieCard key={m.id} movie={m} />
           ))}
