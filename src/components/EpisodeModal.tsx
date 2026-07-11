@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Film, Check } from 'lucide-react';
+import { Film, Check, RotateCw, Minus } from 'lucide-react';
 import { img } from '../lib/tmdb';
 import { useWatch } from '../lib/hooks';
 import { useEffect, useRef, useState } from 'react';
-import { markWatched, unmarkWatched, rateEpisode, setEpisodeNote } from '../lib/repo';
+import { markWatched, unmarkWatched, rateEpisode, setEpisodeNote, rewatchEpisode, removeRewatch } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
 import { StarRating } from './StarRating';
@@ -28,6 +28,7 @@ export function EpisodeModal({
   const { t } = useTranslation();
   const watch = useWatch(episode.id);
   const isWatched = Boolean(watch);
+  const plays = watch?.plays && watch.plays > 1 ? watch.plays : 1;
   const still = img(episode.stillPath, 'w500');
 
   // Local note state with debounced save.
@@ -159,6 +160,36 @@ export function EpisodeModal({
                 {isWatched && <Check size={17} strokeWidth={2} />}
                 {isWatched ? t('episode.watched') : t('episode.mark_watched')}
               </button>
+
+              {/* Re-watches */}
+              {isWatched && (
+                <div className="flex items-center justify-between rounded-xl bg-overlay/[0.04] px-4 py-3">
+                  <span className="text-sm font-semibold text-fg">
+                    {t('episode.times_watched')}
+                    <span className="ms-2 font-display text-base font-bold text-gold">×{plays}</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {plays > 1 && (
+                      <button
+                        onClick={() => removeRewatch(episode.id, episode.showId)}
+                        className="grid h-8 w-8 place-items-center rounded-full border border-overlay/[0.12] text-muted hover:text-fg"
+                        aria-label={t('episode.remove_rewatch')}
+                      >
+                        <Minus size={16} strokeWidth={2} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        rewatchEpisode(episode, show.episodeRuntime);
+                        celebrate('small');
+                      }}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-gold/12 px-3 text-sm font-semibold text-gold ring-1 ring-inset ring-gold/25 hover:bg-gold/20"
+                    >
+                      <RotateCw size={14} strokeWidth={2} /> {t('episode.watch_again')}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

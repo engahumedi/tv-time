@@ -23,8 +23,11 @@ create table if not exists public.watches (
   rating     int,
   note       text,
   source     text   not null default 'import',
+  plays      int    not null default 1,
   primary key (user_id, episode_id)
 );
+-- Re-watch count (added later); safe to run on an existing table.
+alter table public.watches add column if not exists plays int not null default 1;
 
 create table if not exists public.lists (
   id         text   not null,

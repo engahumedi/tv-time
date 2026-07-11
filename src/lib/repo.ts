@@ -220,11 +220,65 @@ export async function markWatched(
     watchedAt,
     runtime: ep.runtime ?? defaultRuntime,
     rating: existing?.rating,
+    note: existing?.note,
     source,
+    plays: existing?.plays,
   };
   await db.watches.put(record);
   void cloudUpsertWatches([record]);
   await recomputeStatus(ep.showId);
+}
+
+/**
+ * Log another watch of an episode (a re-watch). First watch marks it; each
+ * subsequent call bumps the play count and refreshes the watched date.
+ */
+export async function rewatchEpisode(
+  ep: Episode,
+  defaultRuntime = 30,
+): Promise<void> {
+  const existing = await db.watches.get(ep.id);
+  const record: WatchRecord = {
+    episodeId: ep.id,
+    showId: ep.showId,
+    seasonNumber: ep.seasonNumber,
+    episodeNumber: ep.episodeNumber,
+    watchedAt: Date.now(),
+    runtime: ep.runtime ?? defaultRuntime,
+    rating: existing?.rating,
+    note: existing?.note,
+    source: 'manual',
+    plays: (existing?.plays ?? 1) + 1,
+  };
+  await db.watches.put(record);
+  void cloudUpsertWatches([record]);
+  await recomputeStatus(ep.showId);
+}
+
+/** Remove one re-watch (never below 1 — use unmarkWatched to fully un-watch). */
+export async function removeRewatch(id: string, showId: number): Promise<void> {
+  const existing = await db.watches.get(id);
+  if (!existing) return;
+  const plays = Math.max(1, (existing.plays ?? 1) - 1);
+  const record: WatchRecord = { ...existing, plays: plays > 1 ? plays : undefined };
+  await db.watches.put(record);
+  void cloudUpsertWatches([record]);
+  await recomputeStatus(showId);
+}
+
+/** Log another watch of every already-watched episode of a show. */
+export async function rewatchShow(showId: number): Promise<void> {
+  const watched = await db.watches.where('showId').equals(showId).toArray();
+  if (watched.length === 0) return;
+  const now = Date.now();
+  const records = watched.map((w) => ({
+    ...w,
+    watchedAt: now,
+    plays: (w.plays ?? 1) + 1,
+  }));
+  await db.watches.bulkPut(records);
+  void cloudUpsertWatches(records);
+  await recomputeStatus(showId);
 }
 
 export async function unmarkWatched(id: string, showId: number): Promise<void> {

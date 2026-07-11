@@ -177,6 +177,7 @@ export const ar: Translation = {
     add_to_library: 'أضِف إلى المكتبة',
     in_library: 'في المكتبة',
     mark_show_watched: 'تحديد المسلسل كمُشاهَد',
+    rewatch_show: 'مشاهدة المسلسل مرة أخرى',
     mark_season_watched: 'تحديد الموسم كمُشاهَد',
     watched: 'مُشاهَدة',
     mark_watched: 'تحديد كمُشاهَدة',
@@ -212,6 +213,9 @@ export const ar: Translation = {
     note: 'ملاحظاتك',
     note_placeholder: 'اكتب ملاحظة عن هذه الحلقة…',
     note_saved: 'حُفظت',
+    times_watched: 'مرات المشاهدة',
+    watch_again: 'مشاهدة مجددًا',
+    remove_rewatch: 'إزالة مشاهدة',
   },
   movie: {
     mark_watched: 'تحديد كمُشاهَد',

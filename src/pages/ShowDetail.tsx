@@ -18,6 +18,7 @@ import {
   unmarkWatched,
   markSeasonWatched,
   markShowWatched,
+  rewatchShow,
   removeShow,
   setStatus,
   rateShow,
@@ -96,6 +97,11 @@ export function ShowDetail() {
   const showWatches = useShowWatches(showId);
 
   const seasons = useMemo(() => groupSeasons(episodes), [episodes]);
+  const playsById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const w of showWatches ?? []) if (w.plays && w.plays > 1) m.set(w.episodeId, w.plays);
+    return m;
+  }, [showWatches]);
 
   // Fetch the IMDb rating (via OMDb) once we know the show's IMDb id.
   const imdbId = show?.imdbId;
@@ -382,9 +388,13 @@ export function ShowDetail() {
         {inLibrary && totalCount > 0 && (
           <button
             className="btn-ghost mt-4 w-full text-sm"
-            onClick={() => markShowWatched(showId, show.episodeRuntime)}
+            onClick={() =>
+              watchedCount === totalCount
+                ? rewatchShow(showId).then(() => celebrate('big'))
+                : markShowWatched(showId, show.episodeRuntime)
+            }
           >
-            {t('show.mark_show_watched')}
+            {watchedCount === totalCount ? t('show.rewatch_show') : t('show.mark_show_watched')}
           </button>
         )}
 
@@ -402,6 +412,7 @@ export function ShowDetail() {
                   seasonNumber={season.number}
                   episodes={season.episodes}
                   watchedIds={watchedIds}
+                  playsById={playsById}
                   inLibrary={inLibrary}
                   defaultRuntime={show.episodeRuntime}
                   onToggle={toggleEpisode}
@@ -485,6 +496,7 @@ function SeasonBlock({
   seasonNumber,
   episodes,
   watchedIds,
+  playsById,
   inLibrary,
   defaultRuntime,
   onToggle,
@@ -494,6 +506,7 @@ function SeasonBlock({
   seasonNumber: number;
   episodes: Episode[];
   watchedIds: Set<string> | undefined;
+  playsById: Map<string, number>;
   inLibrary: boolean;
   defaultRuntime: number;
   onToggle: (ep: Episode) => void;
@@ -573,6 +586,11 @@ function SeasonBlock({
                       {ep.episodeNumber}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm">{ep.name}</span>
+                    {(playsById.get(ep.id) ?? 1) > 1 && (
+                      <span className="shrink-0 rounded-full bg-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-gold">
+                        ×{playsById.get(ep.id)}
+                      </span>
+                    )}
                     <svg className="rtl-flip shrink-0 text-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                   </button>
                   <button

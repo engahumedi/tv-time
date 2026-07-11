@@ -139,14 +139,17 @@ function buildWatchRecords(
   const byKey = new Map(
     episodes.map((e) => [`${e.seasonNumber}:${e.episodeNumber}`, e]),
   );
-  // Collapse re-watches: one record per episode, keeping the earliest date.
+  // Collapse re-watches: one record per episode, keeping the earliest date, but
+  // remember how many times it was watched so re-watches carry over from TV Time.
   const byEpisode = new Map<string, WatchRecord>();
+  const counts = new Map<string, number>();
   for (const w of group.watches) {
     if (w.episodeNumber === null) continue;
     const key = `${w.seasonNumber}:${w.episodeNumber}`;
     const ep = byKey.get(key);
     const id = episodeId(show.id, w.seasonNumber ?? 1, w.episodeNumber);
     const watchedAt = w.watchedAt ?? Date.now();
+    counts.set(id, (counts.get(id) ?? 0) + 1);
     const record: WatchRecord = {
       episodeId: id,
       showId: show.id,
@@ -159,7 +162,10 @@ function buildWatchRecords(
     const prev = byEpisode.get(id);
     if (!prev || record.watchedAt < prev.watchedAt) byEpisode.set(id, record);
   }
-  return [...byEpisode.values()];
+  return [...byEpisode.values()].map((r) => {
+    const n = counts.get(r.episodeId) ?? 1;
+    return n > 1 ? { ...r, plays: n } : r;
+  });
 }
 
 // ---------------------------------------------------------------------------

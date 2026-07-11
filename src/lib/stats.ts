@@ -71,8 +71,10 @@ export function computeStats(
 ): Stats {
   const showById = new Map(shows.map((s) => [s.id, s]));
 
-  const totalMinutes = watches.reduce((a, w) => a + (w.runtime || 0), 0);
-  const totalEpisodes = watches.length;
+  // Re-watches count: each play adds its runtime and one to the episode tally.
+  const playsOf = (w: WatchRecord) => (w.plays && w.plays > 0 ? w.plays : 1);
+  const totalMinutes = watches.reduce((a, w) => a + (w.runtime || 0) * playsOf(w), 0);
+  const totalEpisodes = watches.reduce((a, w) => a + playsOf(w), 0);
 
   // Shows that have at least one watched episode.
   const watchedShowIds = new Set(watches.map((w) => w.showId));

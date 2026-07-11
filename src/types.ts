@@ -99,6 +99,8 @@ export interface WatchRecord {
   note?: string;
   /** Where this record came from. */
   source: 'manual' | 'import';
+  /** How many times this episode was watched (re-watches). Absent = 1. */
+  plays?: number;
 }
 
 /**

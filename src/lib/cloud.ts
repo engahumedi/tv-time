@@ -51,6 +51,7 @@ function watchToRow(w: WatchRecord) {
     rating: w.rating ?? null,
     note: w.note ?? null,
     source: w.source,
+    plays: w.plays ?? 1,
   };
 }
 
@@ -64,6 +65,7 @@ interface WatchRow {
   rating: number | null;
   note: string | null;
   source: string;
+  plays?: number | null;
 }
 
 function rowToWatch(r: WatchRow): WatchRecord {
@@ -77,6 +79,7 @@ function rowToWatch(r: WatchRow): WatchRecord {
     rating: r.rating ?? undefined,
     note: r.note ?? undefined,
     source: (r.source as WatchRecord['source']) ?? 'import',
+    plays: r.plays && r.plays > 1 ? r.plays : undefined,
   };
 }
 

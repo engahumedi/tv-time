@@ -175,6 +175,7 @@ export const en = {
     add_to_library: 'Add to library',
     in_library: 'In library',
     mark_show_watched: 'Mark whole show watched',
+    rewatch_show: 'Watch whole show again',
     mark_season_watched: 'Mark season watched',
     watched: 'Watched',
     mark_watched: 'Mark watched',
@@ -210,6 +211,9 @@ export const en = {
     note: 'Your notes',
     note_placeholder: 'Write a note about this episode…',
     note_saved: 'Saved',
+    times_watched: 'Times watched',
+    watch_again: 'Watch again',
+    remove_rewatch: 'Remove a watch',
   },
   movie: {
     mark_watched: 'Mark watched',
