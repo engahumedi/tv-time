@@ -214,6 +214,10 @@ export const en = {
     times_watched: 'Times watched',
     watch_again: 'Watch again',
     remove_rewatch: 'Remove a watch',
+    share_cta: 'Share',
+    share_title: 'Share this episode',
+    share_save: 'Save image',
+    share_failed: 'Couldn’t build the image (the artwork blocked export). Try again.',
   },
   movie: {
     mark_watched: 'Mark watched',

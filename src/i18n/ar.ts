@@ -216,6 +216,10 @@ export const ar: Translation = {
     times_watched: 'مرات المشاهدة',
     watch_again: 'مشاهدة مجددًا',
     remove_rewatch: 'إزالة مشاهدة',
+    share_cta: 'مشاركة',
+    share_title: 'شارك هذه الحلقة',
+    share_save: 'حفظ الصورة',
+    share_failed: 'تعذّر إنشاء الصورة (الصورة منعت التصدير). حاول مرة أخرى.',
   },
   movie: {
     mark_watched: 'تحديد كمُشاهَد',

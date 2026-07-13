@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Film, Check, RotateCw, Minus } from 'lucide-react';
+import { Film, Check, RotateCw, Minus, Share2 } from 'lucide-react';
 import { img } from '../lib/tmdb';
 import { useWatch } from '../lib/hooks';
 import { useEffect, useRef, useState } from 'react';
@@ -8,6 +8,7 @@ import { markWatched, unmarkWatched, rateEpisode, setEpisodeNote, rewatchEpisode
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
 import { StarRating } from './StarRating';
+import { EpisodeShareModal } from './EpisodeShareModal';
 import { EpisodeReactions } from './EpisodeReactions';
 import type { Episode, Show } from '../types';
 
@@ -30,6 +31,7 @@ export function EpisodeModal({
   const isWatched = Boolean(watch);
   const plays = watch?.plays && watch.plays > 1 ? watch.plays : 1;
   const still = img(episode.stillPath, 'w500');
+  const [sharing, setSharing] = useState(false);
 
   // Local note state with debounced save.
   const [note, setNote] = useState('');
@@ -190,6 +192,13 @@ export function EpisodeModal({
                   </div>
                 </div>
               )}
+
+              {/* Share a card for this episode */}
+              {isWatched && (
+                <button onClick={() => setSharing(true)} className="btn-ghost w-full">
+                  <Share2 size={16} strokeWidth={1.9} /> {t('episode.share_cta')}
+                </button>
+              )}
             </>
           )}
 
@@ -197,6 +206,10 @@ export function EpisodeModal({
           <EpisodeReactions episodeId={episode.id} showId={show.id} />
         </div>
       </motion.div>
+
+      {sharing && (
+        <EpisodeShareModal episode={episode} show={show} watch={watch} onClose={() => setSharing(false)} />
+      )}
     </div>
   );
 }
