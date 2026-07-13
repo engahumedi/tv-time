@@ -61,11 +61,15 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
  */
 export async function buildEpisodeCard(d: EpisodeCardData): Promise<Blob | null> {
   const W = 1200, H = 630;
+  const SCALE = 2; // render at 2× so the card stays crisp when scaled/zoomed
   const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = W * SCALE;
+  canvas.height = H * SCALE;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
+  ctx.scale(SCALE, SCALE); // keep drawing in logical 1200×630 coordinates
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   try {
     await (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
@@ -87,7 +91,7 @@ export async function buildEpisodeCard(d: EpisodeCardData): Promise<Blob | null>
 
   // Artwork panel (left): show poster if available, else episode still.
   const px = 56, py = 56, pw = 320, ph = H - 112;
-  const posterUrl = d.posterPath ? img(d.posterPath, 'w500') : d.stillPath ? img(d.stillPath, 'w780') : null;
+  const posterUrl = d.posterPath ? img(d.posterPath, 'w780') : d.stillPath ? img(d.stillPath, 'original') : null;
   const art = posterUrl ? await loadImage(posterUrl) : null;
   ctx.save();
   roundRect(ctx, px, py, pw, ph, 18);
