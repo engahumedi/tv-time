@@ -228,6 +228,7 @@ export const en = {
     watchlist_empty_title: 'Nothing to watch yet',
     watchlist_empty_body: 'Bookmark movies from Discover and they’ll queue up here for movie night.',
     remove_confirm: 'Remove this movie from your library?',
+    share_title: 'Share this movie',
   },
   lists: {
     title: 'My Lists',

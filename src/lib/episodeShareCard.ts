@@ -1,12 +1,12 @@
 import { img } from './tmdb';
 
-export interface EpisodeCardData {
-  showName: string;
-  seasonEpisode: string; // e.g. "S01 · E06"
-  episodeName?: string;
-  posterPath?: string; // show poster (2:3) preferred
-  stillPath?: string; // episode still (16:9) fallback
-  rating?: number; // 1..5 stars, optional
+export interface ShareCardData {
+  title: string;
+  subtitle: string; // e.g. "S01 · E06" or "2019 · 153 min"
+  caption?: string; // e.g. episode name (italic), optional
+  posterPath?: string; // poster (2:3) preferred
+  stillPath?: string; // still/backdrop (16:9) fallback
+  rating?: number; // 0..5 stars, optional
   brand: string; // app name
   url: string; // site URL for the footer
 }
@@ -59,7 +59,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
  * blob. Pure canvas (no dependency). Returns null if the browser taints the
  * canvas (blocks export) — the caller can fall back to a text-only share.
  */
-export async function buildEpisodeCard(d: EpisodeCardData): Promise<Blob | null> {
+export async function buildShareCard(d: ShareCardData): Promise<Blob | null> {
   const W = 1200, H = 630;
   const SCALE = 2; // render at 2× so the card stays crisp when scaled/zoomed
   const canvas = document.createElement('canvas');
@@ -124,9 +124,9 @@ export async function buildEpisodeCard(d: EpisodeCardData): Promise<Blob | null>
 
   // Show name (serif, wrap up to 2 lines)
   ctx.fillStyle = '#ffffff';
-  const titleSize = d.showName.length > 22 ? 64 : 78;
+  const titleSize = d.title.length > 22 ? 64 : 78;
   ctx.font = `800 ${titleSize}px Fraunces, Georgia, serif`;
-  const lines = wrap(ctx, d.showName, cw, 2);
+  const lines = wrap(ctx, d.title, cw, 2);
   let ty = 210;
   for (const ln of lines) {
     ctx.fillText(ln, cx, ty);
@@ -136,7 +136,7 @@ export async function buildEpisodeCard(d: EpisodeCardData): Promise<Blob | null>
   // Season · Episode
   ctx.fillStyle = '#a8a29e';
   ctx.font = '600 30px Geist, Inter, system-ui, sans-serif';
-  ctx.fillText(d.seasonEpisode, cx, ty + 8);
+  ctx.fillText(d.subtitle, cx, ty + 8);
 
   // Divider
   ctx.fillStyle = '#c9a24b';
@@ -159,11 +159,11 @@ export async function buildEpisodeCard(d: EpisodeCardData): Promise<Blob | null>
     ctx.fillText('WATCHED', cx, vy);
   }
 
-  // Episode name (muted, one line)
-  if (d.episodeName) {
+  // Caption (muted, one line)
+  if (d.caption) {
     ctx.fillStyle = '#c9c7c2';
     ctx.font = 'italic 500 26px Fraunces, Georgia, serif';
-    ctx.fillText(ellipsize(ctx, d.episodeName, cw), cx, vy + 46);
+    ctx.fillText(ellipsize(ctx, d.caption, cw), cx, vy + 46);
   }
 
   // Footer

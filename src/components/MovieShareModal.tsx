@@ -4,20 +4,10 @@ import { motion } from 'framer-motion';
 import { X, Share2, Download } from 'lucide-react';
 import { buildShareCard } from '../lib/episodeShareCard';
 import { triggerDownload } from '../lib/exporter';
-import type { Episode, Show, WatchRecord } from '../types';
+import type { Movie } from '../types';
 
-/** Generates a shareable image for a watched episode and lets you share/save it. */
-export function EpisodeShareModal({
-  episode,
-  show,
-  watch,
-  onClose,
-}: {
-  episode: Episode;
-  show: Show;
-  watch: WatchRecord | null | undefined;
-  onClose: () => void;
-}) {
+/** Generates a shareable image for a watched movie and lets you share/save it. */
+export function MovieShareModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
   const { t } = useTranslation();
   const [preview, setPreview] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -33,13 +23,15 @@ export function EpisodeShareModal({
     let cancelled = false;
     let objectUrl: string | null = null;
     (async () => {
+      const year = movie.releaseDate?.slice(0, 4);
+      const runtime = movie.runtime ? t('episode.runtime', { n: movie.runtime }) : '';
+      const subtitle = [year, runtime].filter(Boolean).join(' · ');
       const b = await buildShareCard({
-        title: show.name,
-        subtitle: `S${String(episode.seasonNumber).padStart(2, '0')} · E${String(episode.episodeNumber).padStart(2, '0')}`,
-        caption: episode.name,
-        posterPath: show.posterPath ?? undefined,
-        stillPath: episode.stillPath ?? undefined,
-        rating: watch?.rating,
+        title: movie.title,
+        subtitle,
+        posterPath: movie.posterPath ?? undefined,
+        stillPath: movie.backdropPath ?? undefined,
+        rating: movie.userRating ? Math.round(movie.userRating / 2) : undefined,
         brand: t('app.name'),
         url: 'engahumedi.github.io/tv-time',
       });
@@ -57,29 +49,23 @@ export function EpisodeShareModal({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [episode.id]);
+  }, [movie.id]);
 
-  const filename = `${show.name}-S${episode.seasonNumber}E${episode.episodeNumber}.png`
-    .replace(/[^\w.-]+/g, '_');
+  const filename = `${movie.title}.png`.replace(/[^\w.-]+/g, '_');
 
   async function share() {
     if (!blob) return;
     const file = new File([blob], filename, { type: 'image/png' });
-    const text = `${show.name} — S${episode.seasonNumber} · E${episode.episodeNumber}`;
     const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
     if (nav.canShare?.({ files: [file] }) && navigator.share) {
       try {
-        await navigator.share({ files: [file], title: show.name, text });
+        await navigator.share({ files: [file], title: movie.title });
         return;
       } catch {
-        /* user dismissed — fall through to download */
+        /* dismissed — fall through */
       }
     }
     triggerDownload(blob, filename);
-  }
-
-  function download() {
-    if (blob) triggerDownload(blob, filename);
   }
 
   return (
@@ -93,7 +79,7 @@ export function EpisodeShareModal({
         <div className="mb-4 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-lg font-bold">
             <Share2 size={19} strokeWidth={1.75} className="text-gold" />
-            {t('episode.share_title')}
+            {t('movie.share_title')}
           </h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:text-fg" aria-label={t('common.close')}>
             <X size={18} strokeWidth={2} />
@@ -111,7 +97,7 @@ export function EpisodeShareModal({
         </div>
 
         <div className="mt-4 flex gap-2">
-          <button onClick={download} disabled={!blob} className="btn-ghost flex-1 text-sm">
+          <button onClick={() => blob && triggerDownload(blob, filename)} disabled={!blob} className="btn-ghost flex-1 text-sm">
             <Download size={16} strokeWidth={1.9} /> {t('episode.share_save')}
           </button>
           <button onClick={share} disabled={!blob} className="btn-gold flex-1 text-sm">

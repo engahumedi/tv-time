@@ -230,6 +230,7 @@ export const ar: Translation = {
     watchlist_empty_title: 'لا شيء لمشاهدته بعد',
     watchlist_empty_body: 'احفظ أفلامًا من الاستكشاف وستصطفّ هنا لليلة أفلامك.',
     remove_confirm: 'إزالة هذا الفيلم من مكتبتك؟',
+    share_title: 'شارك هذا الفيلم',
   },
   lists: {
     title: 'قوائمي',

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, Heart, Check, Trash2, Plus, Bookmark } from 'lucide-react';
+import { ChevronLeft, Heart, Check, Trash2, Plus, Bookmark, Share2 } from 'lucide-react';
 import { getMovieDetail, img } from '../lib/tmdb';
 import { getImdbRating, type ImdbRating } from '../lib/omdb';
 import { useMovie } from '../lib/hooks';
@@ -20,6 +20,7 @@ import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { ListPickerModal } from '../components/ListPickerModal';
 import { WhereToWatch } from '../components/WhereToWatch';
+import { MovieShareModal } from '../components/MovieShareModal';
 import type { Movie } from '../types';
 
 export function MovieDetail() {
@@ -33,6 +34,7 @@ export function MovieDetail() {
   const [loading, setLoading] = useState(true);
   const [imdb, setImdb] = useState<ImdbRating | null>(null);
   const [showLists, setShowLists] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +204,12 @@ export function MovieDetail() {
                 <Plus size={16} strokeWidth={2} />
                 {t('show.add_to_list')}
               </button>
+              {watched && (
+                <button onClick={() => setSharing(true)} className="btn-ghost text-sm">
+                  <Share2 size={16} strokeWidth={1.9} />
+                  {t('episode.share_cta')}
+                </button>
+              )}
             </>
           )}
         </div>
@@ -211,9 +219,7 @@ export function MovieDetail() {
           <div className="mt-4 flex items-center justify-between rounded-2xl border border-overlay/[0.07] bg-navy-800 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">{t('show.your_rating')}</p>
-              <p className="text-xs text-faint">
-                {stored?.userRating ? t('show.out_of_ten', { n: stored.userRating }) : t('show.rate_this')}
-              </p>
+              {!stored?.userRating && <p className="text-xs text-faint">{t('show.rate_this')}</p>}
             </div>
             <StarRating
               value={(stored?.userRating ?? 0) / 2}
@@ -241,6 +247,7 @@ export function MovieDetail() {
       {showLists && (
         <ListPickerModal itemId={movieId} kind="movie" onClose={() => setShowLists(false)} />
       )}
+      {sharing && movie && <MovieShareModal movie={movie} onClose={() => setSharing(false)} />}
     </div>
   );
 }

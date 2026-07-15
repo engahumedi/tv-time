@@ -288,11 +288,7 @@ export function ShowDetail() {
           <div className="mt-4 flex items-center justify-between rounded-2xl border border-overlay/[0.07] bg-navy-800 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">{t('show.your_rating')}</p>
-              <p className="text-xs text-faint">
-                {storedShow?.userRating
-                  ? t('show.out_of_ten', { n: storedShow.userRating })
-                  : t('show.rate_this')}
-              </p>
+              {!storedShow?.userRating && <p className="text-xs text-faint">{t('show.rate_this')}</p>}
             </div>
             <StarRating
               value={(storedShow?.userRating ?? 0) / 2}
