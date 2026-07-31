@@ -16,6 +16,9 @@ interface Rail {
   movies?: Movie[];
 }
 
+/** How many "Because you watched X" rails to build. */
+const RAIL_COUNT = 3;
+
 /**
  * Personalized "Because you watched X" rails, seeded from the user's own
  * library (favourites first). Live TMDB only — renders nothing in demo mode or
@@ -27,6 +30,9 @@ export function ForYou({ kind }: { kind: 'show' | 'movie' }) {
   const movies = useMovies();
   const watches = useAllWatches();
   const [rails, setRails] = useState<Rail[]>([]);
+  // Fixed for the life of this mount, so the rails stay stable while you browse
+  // but differ the next time you open Discover.
+  const [rotation] = useState(() => Math.random());
 
   useEffect(() => {
     if (!hasTmdbKey) return;
@@ -44,7 +50,7 @@ export function ForYou({ kind }: { kind: 'show' | 'movie' }) {
         const watchedLib = lib.filter((s) => watchedIds.has(s.id));
         if (watchedLib.length === 0) return;
         const exclude = new Set(lib.map((s) => s.id));
-        const seeds = pickSeeds(watchedLib, (s) => Boolean(s.favorite), (s) => s.id);
+        const seeds = pickSeeds(watchedLib, (s) => Boolean(s.favorite), (s) => s.id, rotation);
         const out: Rail[] = [];
         for (const seed of seeds) {
           try {
@@ -61,7 +67,7 @@ export function ForYou({ kind }: { kind: 'show' | 'movie' }) {
         const watched = (movies ?? []).filter((m) => m.watched);
         if (watched.length === 0) return;
         const exclude = new Set((movies ?? []).map((m) => m.id));
-        const seeds = pickSeeds(watched, (m) => Boolean(m.favorite), (m) => m.id);
+        const seeds = pickSeeds(watched, (m) => Boolean(m.favorite), (m) => m.id, rotation);
         const out: Rail[] = [];
         for (const seed of seeds) {
           try {
@@ -111,21 +117,29 @@ export function ForYou({ kind }: { kind: 'show' | 'movie' }) {
   );
 }
 
-/** Pick up to two seeds: favourites first, then the most recently added, with a real (positive) TMDB id. */
+/**
+ * Pick up to RAIL_COUNT seeds with a real (positive) TMDB id. Favourites are
+ * preferred, but the starting point rotates per visit (`rotation`, 0..1) so
+ * Discover doesn't recommend from the same one or two shows every single time.
+ */
 function pickSeeds<T>(
   items: T[],
   isFav: (x: T) => boolean,
   idOf: (x: T) => number,
+  rotation: number,
 ): T[] {
-  const real = items.filter((x) => idOf(x) > 0);
-  const favs = real.filter(isFav);
-  const rest = real.filter((x) => !isFav(x));
   const seen = new Set<number>();
-  const ordered = [...favs, ...rest].filter((x) => {
+  const unique = items.filter((x) => {
     const id = idOf(x);
-    if (seen.has(id)) return false;
+    if (id <= 0 || seen.has(id)) return false;
     seen.add(id);
     return true;
   });
-  return ordered.slice(0, 2);
+  if (unique.length === 0) return [];
+  const favs = unique.filter(isFav);
+  // Rotate through favourites when there are enough of them, else everything.
+  const pool = favs.length >= RAIL_COUNT ? favs : unique;
+  const start = Math.floor(rotation * pool.length) % pool.length;
+  const take = Math.min(RAIL_COUNT, pool.length);
+  return Array.from({ length: take }, (_, i) => pool[(start + i) % pool.length]);
 }

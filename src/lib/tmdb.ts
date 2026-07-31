@@ -116,10 +116,10 @@ async function fetchShowList(
     .map((r) => searchResultToShow(r, genres));
 }
 
-export const getTrending = (): Promise<Show[]> =>
-  fetchShowList('/trending/tv/week');
-export const getTopRated = (): Promise<Show[]> =>
-  fetchShowList('/tv/top_rated', { 'vote_count.gte': '300' });
+export const getTrending = (page = 1): Promise<Show[]> =>
+  fetchShowList('/trending/tv/week', { page: String(page) });
+export const getTopRated = (page = 1): Promise<Show[]> =>
+  fetchShowList('/tv/top_rated', { 'vote_count.gte': '300', page: String(page) });
 export const discoverByGenre = (genreId: number): Promise<Show[]> =>
   fetchShowList('/discover/tv', {
     with_genres: String(genreId),
@@ -459,10 +459,10 @@ async function fetchMovieList(
     .map((r) => movieResultToMovie(r, genres));
 }
 
-export const getTrendingMovies = (): Promise<Movie[]> =>
-  fetchMovieList('/trending/movie/week');
-export const getTopRatedMovies = (): Promise<Movie[]> =>
-  fetchMovieList('/movie/top_rated', { 'vote_count.gte': '500' });
+export const getTrendingMovies = (page = 1): Promise<Movie[]> =>
+  fetchMovieList('/trending/movie/week', { page: String(page) });
+export const getTopRatedMovies = (page = 1): Promise<Movie[]> =>
+  fetchMovieList('/movie/top_rated', { 'vote_count.gte': '500', page: String(page) });
 export const getMovieRecommendations = (movieId: number): Promise<Movie[]> =>
   movieId < 0 ? Promise.resolve([]) : fetchMovieList(`/movie/${movieId}/recommendations`);
 

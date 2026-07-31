@@ -32,6 +32,14 @@ type Tab = 'trending' | 'top' | 'filters';
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 1969 }, (_, i) => CURRENT_YEAR - i);
 const RATINGS = [9, 8, 7, 6, 5];
+/** TMDB pages pulled per load — 20 results each, so the grid opens deep. */
+const PAGES_PER_LOAD = 3;
+
+/** Merge pages, dropping repeats (TMDB pages can overlap). */
+function dedupeById<T extends { id: number }>(items: T[]): T[] {
+  const seen = new Set<number>();
+  return items.filter((x) => (seen.has(x.id) ? false : (seen.add(x.id), true)));
+}
 
 export function Discover() {
   const { t } = useTranslation();
@@ -43,6 +51,10 @@ export function Discover() {
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  // Paging for the browse grids ("Load more").
+  const [pagesLoaded, setPagesLoaded] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [exhausted, setExhausted] = useState(false);
   const [tvGenres, setTvGenres] = useState<{ id: number; name: string }[]>([]);
   const [movieGenres, setMovieGenres] = useState<{ id: number; name: string }[]>([]);
   // Filters
@@ -109,6 +121,22 @@ export function Discover() {
     return () => clearTimeout(debounce.current);
   }, [query, kind, searching]);
 
+  /** Fetch one TMDB page of whatever browse selection is active. */
+  function fetchBrowsePage(p: number): Promise<Show[] | Movie[]> {
+    const filters: DiscoverFilters = { genreId, year, minRating, sort, page: p };
+    return kind === 'movie'
+      ? tab === 'trending'
+        ? getTrendingMovies(p)
+        : tab === 'top'
+          ? getTopRatedMovies(p)
+          : discoverMovies(filters)
+      : tab === 'trending'
+        ? getTrending(p)
+        : tab === 'top'
+          ? getTopRated(p)
+          : discoverShows(filters);
+  }
+
   // Browse (trending / top / filters) — active when not searching.
   useEffect(() => {
     if (searching) return;
@@ -117,30 +145,56 @@ export function Discover() {
     setResults(null);
     setMovies(null);
     setPeople([]);
+    setPagesLoaded(0);
+    setExhausted(false);
     // Demo mode has no browse endpoints — fall back to the sample library.
     if (!hasTmdbKey) {
       searchShows('').then(setResults).catch(() => setError(true)).finally(() => setLoading(false));
       setMovies([]);
       return;
     }
-    const filters: DiscoverFilters = { genreId, year, minRating, sort };
-    const load =
-      kind === 'movie'
-        ? tab === 'trending'
-          ? getTrendingMovies()
-          : tab === 'top'
-            ? getTopRatedMovies()
-            : discoverMovies(filters)
-        : tab === 'trending'
-          ? getTrending()
-          : tab === 'top'
-            ? getTopRated()
-            : discoverShows(filters);
-    (load as Promise<Show[] | Movie[]>)
-      .then((r) => (kind === 'movie' ? setMovies(r as Movie[]) : setResults(r as Show[])))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    // Load several pages up front so Discover opens with a deep grid, not 20 items.
+    Promise.all(Array.from({ length: PAGES_PER_LOAD }, (_, i) => fetchBrowsePage(i + 1)))
+      .then((pages) => {
+        if (cancelled) return;
+        const merged = dedupeById(pages.flat() as (Show | Movie)[]);
+        if (kind === 'movie') setMovies(merged as Movie[]);
+        else setResults(merged as Show[]);
+        setPagesLoaded(PAGES_PER_LOAD);
+        if (pages[pages.length - 1].length === 0) setExhausted(true);
+      })
+      .catch(() => !cancelled && setError(true))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searching, tab, kind, genreId, year, minRating, sort]);
+
+  /** Append the next batch of pages to the grid. */
+  async function loadMore() {
+    if (loadingMore || exhausted) return;
+    setLoadingMore(true);
+    try {
+      const next = Array.from({ length: PAGES_PER_LOAD }, (_, i) => pagesLoaded + i + 1);
+      const pages = await Promise.all(next.map((p) => fetchBrowsePage(p)));
+      const incoming = pages.flat() as (Show | Movie)[];
+      if (incoming.length === 0) {
+        setExhausted(true);
+      } else {
+        if (kind === 'movie') setMovies((cur) => dedupeById([...(cur ?? []), ...incoming]) as Movie[]);
+        else setResults((cur) => dedupeById([...(cur ?? []), ...incoming]) as Show[]);
+        setPagesLoaded((n) => n + PAGES_PER_LOAD);
+        // TMDB caps browse paging at 500 pages; stop when a page comes back short.
+        if (pages[pages.length - 1].length === 0) setExhausted(true);
+      }
+    } catch {
+      setExhausted(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'trending', label: t('discover.tab_trending') },
@@ -329,6 +383,15 @@ export function Discover() {
           {movies.map((m) => (
             <MovieCard key={m.id} movie={m} />
           ))}
+        </div>
+      )}
+
+      {/* Load more — browse grids only (search returns a single page). */}
+      {!loading && !searching && hasTmdbKey && !exhausted && hasResults && hasResults.length > 0 && (
+        <div className="mt-6 flex justify-center">
+          <button onClick={loadMore} disabled={loadingMore} className="btn-ghost text-sm">
+            {loadingMore ? t('common.loading') : t('discover.load_more')}
+          </button>
         </div>
       )}
 

@@ -171,6 +171,7 @@ export const ar: Translation = {
     people: 'أشخاص',
     people_none: 'لا يوجد أشخاص.',
     known_for: 'اشتهر بـ',
+    load_more: 'تحميل المزيد',
     because_you_watched: 'لأنك شاهدت {{name}}',
   },
   show: {

@@ -169,6 +169,7 @@ export const en = {
     people: 'People',
     people_none: 'No people found.',
     known_for: 'Known for',
+    load_more: 'Load more',
     because_you_watched: 'Because you watched {{name}}',
   },
   show: {
