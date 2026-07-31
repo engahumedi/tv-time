@@ -69,7 +69,9 @@ export function PosterRating({
           start();
         }
       },
-      { rootMargin: '200px' },
+      // Start early — a screen or so ahead — so the badge is usually already
+      // resolved by the time the card is actually on screen.
+      { rootMargin: '800px' },
     );
     io.observe(target);
     return () => {

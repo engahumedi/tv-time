@@ -16,7 +16,7 @@ import {
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
 import { Poster } from '../components/Poster';
-import { TmdbRating, ImdbRating as ImdbBadge, RottenTomatoes } from '../components/Rating';
+import { TmdbRating, ImdbRating as ImdbBadge, RottenTomatoes, Metacritic } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { ListPickerModal } from '../components/ListPickerModal';
 import { WhereToWatch } from '../components/WhereToWatch';
@@ -132,6 +132,7 @@ export function MovieDetail() {
                 <TmdbRating value={movie.voteAverage} />
                 <ImdbBadge value={imdb?.imdb?.rating} />
                 <RottenTomatoes value={imdb?.rottenTomatoes} />
+                <Metacritic value={imdb?.metacritic} />
               </div>
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">

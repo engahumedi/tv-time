@@ -41,9 +41,10 @@ function write(key: string, v: ExternalRatings | null): void {
   }
 }
 
-// Only a few look-ups in flight at once: a Discover grid can hold 60+ cards and
-// we don't want to fire hundreds of requests the moment it renders.
-const MAX_INFLIGHT = 4;
+// Cap look-ups in flight: a Discover grid can hold 60+ cards and we don't want
+// to fire hundreds of requests at once. Each look-up is two chained requests,
+// so this is the main lever on how fast badges fill in.
+const MAX_INFLIGHT = 10;
 let inflight = 0;
 const queue: (() => void)[] = [];
 

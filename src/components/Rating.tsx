@@ -46,6 +46,30 @@ export function RottenTomatoes({
   );
 }
 
+/**
+ * Metacritic score. OMDb carries it for far more films than it does Rotten
+ * Tomatoes, so it fills the gap when there's no tomatometer.
+ */
+export function Metacritic({
+  value,
+  className = '',
+}: {
+  value: number | null | undefined;
+  className?: string;
+}) {
+  if (value === null || value === undefined) return null;
+  const tone = value >= 61 ? 'bg-[#00ce7a] text-black' : value >= 40 ? 'bg-[#ffbd3f] text-black' : 'bg-[#ff6874] text-black';
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold ${tone} ${className}`}
+      title="Metacritic"
+    >
+      <span className="tracking-tight">MC</span>
+      {value}
+    </span>
+  );
+}
+
 export function ImdbRating({
   value,
   className = '',
