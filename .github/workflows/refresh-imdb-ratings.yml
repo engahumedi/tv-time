@@ -1,0 +1,47 @@
+name: Refresh IMDb ratings
+
+on:
+  # IMDb publishes a new dataset every day; pick it up each morning (UTC).
+  schedule:
+    - cron: '30 5 * * *'
+  # Allow a manual run from the Actions tab.
+  workflow_dispatch:
+    inputs:
+      min_votes:
+        description: 'Vote floor for titles to mirror'
+        required: false
+        default: '50'
+
+# One refresh at a time; let an in-progress run finish.
+concurrency:
+  group: imdb-ratings
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Refresh imdb_ratings from the official IMDb dataset
+        env:
+          SUPABASE_URL: https://ahibgeazsfftwzlzytah.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MIN_VOTES: ${{ github.event.inputs.min_votes || '50' }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set."
+            echo "Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          node scripts/refresh-imdb-ratings.mjs
