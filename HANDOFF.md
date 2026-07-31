@@ -20,7 +20,7 @@ history over.
 - **Repo:** `engahumedi/tv-time`
 - **Working branch:** `claude/showtrack-tv-tracker-27fepl` — this is the **only** branch on the remote and the **default** branch; GitHub Pages deploys directly from it (see `.github/workflows/deploy-pages.yml`). There is no separate `main`, so there's currently no PR (a base branch would have to be created first).
 - **Live site (GitHub Pages):** https://engahumedi.github.io/tv-time/
-- **Latest commit:** `019d70c` (Import: count re-watches truthfully and idempotently)
+- **Latest commit:** `b3acc04` (Serve IMDb ratings from the official dataset; drop Rotten Tomatoes)
 
 > **What changed since the original handoff:** two large batches were added on
 > top of §13 — (a) a full **social layer** (public profiles, follow-with-
@@ -381,3 +381,37 @@ Same discipline: `tsc + vite` build + `vitest` (**29 tests**) + a Chromium/mock 
 - (A **preset-avatar gallery** was added and then **removed** at the owner's request — no longer in the code.)
 
 **Schema note:** `supabase/schema.sql` now includes `watches.plays` (idempotent `add column if not exists`); it was also applied to the live project via the Management API. All social tables were applied live earlier.
+
+---
+
+## 15. Ratings architecture (IMDb dataset mirror)
+
+Poster grids show **IMDb** scores, served from our own mirror of IMDb's
+official daily dataset rather than a per-title API.
+
+- **Source:** `https://datasets.imdbws.com/title.ratings.tsv.gz` (free, official,
+  daily, ~1.7M titles). Rows with **50+ votes** (612,909) are loaded into
+  `public.imdb_ratings (tconst, rating, votes)`.
+- **Mapping:** TMDB's list endpoints do **not** return an `imdb_id`, so the edge
+  function resolves it once per title (`/movie/{id}` or `/tv/{id}/external_ids`)
+  and caches it in `public.tmdb_imdb (kind, tmdb_id, imdb_id)` for every user.
+- **Endpoint:** `GET /functions/v1/api/ratings?tv=1,2&movie=3` →
+  `{"tv:1":9.5,...}`. Both tables are world-readable via RLS; only the service
+  role writes. Response cached 6h.
+- **Client:** `lib/ratings.ts` coalesces all visible cards into one request per
+  tick (batch ≤100, 60ms window) and caches results for a day in localStorage.
+  `components/PosterRating.tsx` fetches when a card nears the viewport and falls
+  back to the TMDB star badge until/unless an IMDb score exists.
+- **Measured:** coverage ~70% (OMDb) → **~93%**; a 20-title grid resolves in one
+  ~1s request instead of 40.
+
+**Reloading the dataset** (it refreshes daily; a periodic top-up keeps new
+titles current): download the TSV, then batch `insert ... on conflict do update`
+into `imdb_ratings`. Note the Management API rejects python-urllib's User-Agent —
+send `User-Agent: curl/8.5.0`. ~1,400 rows/s at 2,500 rows per statement.
+
+**OMDb** is still used, but only on detail pages, for **IMDb + Metacritic**
+(`getExternalRatings`). **Rotten Tomatoes was removed**: measured coverage was
+0% of TV series and ~30% of films via OMDb (its `tomatoes=true` parameter added
+nothing, Wikidata was worse: 1/20 TV, 3/20 films), and there is no free public
+RT API. MDBList is the only credible aggregator but needs a (free) API key.
