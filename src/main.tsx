@@ -6,14 +6,18 @@ import './lib/settings';
 import './index.css';
 import App from './App';
 import { AuthProvider } from './lib/auth';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* HashRouter keeps deep links working on static hosts with no server. */}
-    <AuthProvider>
-      <HashRouter>
-        <App />
-      </HashRouter>
-    </AuthProvider>
+    {/* Outermost, so a crash anywhere still renders a recovery card. */}
+    <ErrorBoundary>
+      {/* HashRouter keeps deep links working on static hosts with no server. */}
+      <AuthProvider>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

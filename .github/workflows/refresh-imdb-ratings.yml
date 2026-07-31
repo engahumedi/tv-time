@@ -45,3 +45,11 @@ jobs:
             exit 1
           fi
           node scripts/refresh-imdb-ratings.mjs
+
+      - name: Pre-warm TMDB -> IMDb id mappings for browsable titles
+        env:
+          SUPABASE_URL: https://ahibgeazsfftwzlzytah.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TMDB_PROXY: https://ahibgeazsfftwzlzytah.supabase.co/functions/v1/api
+          WARM_PAGES: '10'
+        run: node scripts/warm-imdb-mappings.mjs

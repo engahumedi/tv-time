@@ -286,20 +286,33 @@ async function pull(): Promise<void> {
   // Imported lazily to avoid a static import cycle with repo.ts.
   const { recomputeStatus } = await import('./repo');
 
-  // Rebuild the episode cache for any show we don't have episodes for yet,
-  // so the "To Watch" feed works right after signing in on a new device.
-  for (const show of shows) {
-    const have = await db.episodes.where('showId').equals(show.id).count();
-    if (have === 0) {
+  // Rebuild the episode cache for any show we don't have episodes for yet, so
+  // the "To Watch" feed works right after signing in on a new device.
+  //
+  // Each show costs a TMDB detail call plus one per season (~3s), so doing this
+  // one show at a time made a first sign-in on a large library take minutes.
+  // A few shows in flight at once cuts that to well under a minute while
+  // staying gentle on the API.
+  const CONCURRENCY = 6;
+  let cursor = 0;
+  async function worker() {
+    while (cursor < shows.length) {
+      const show = shows[cursor++];
       try {
-        const eps = await getAllEpisodes(show.id, show.episodeRuntime);
-        if (eps.length) await db.episodes.bulkPut(eps);
+        const have = await db.episodes.where('showId').equals(show.id).count();
+        if (have === 0) {
+          const eps = await getAllEpisodes(show.id, show.episodeRuntime);
+          if (eps.length) await db.episodes.bulkPut(eps);
+        }
+        await recomputeStatus(show.id);
       } catch {
-        /* best-effort */
+        /* best-effort: one bad show must not stall the rest of the sync */
       }
     }
-    await recomputeStatus(show.id);
   }
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, shows.length) }, worker),
+  );
 }
 
 /**
