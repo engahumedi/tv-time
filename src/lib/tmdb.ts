@@ -108,6 +108,7 @@ async function fetchShowList(
     loadGenres(),
     tmdb<{ results: TmdbSearchResult[] }>(path, {
       language: tmdbLang(),
+      include_adult: 'false',
       ...params,
     }),
   ]);
@@ -140,6 +141,8 @@ export interface DiscoverFilters {
   sort?: string;
   /** TMDB result page (used to randomise the Surprise picker). */
   page?: number;
+  /** Minimum vote count. Raises the quality bar above the sort-based default. */
+  minVotes?: number;
 }
 
 function buildDiscoverParams(
@@ -151,7 +154,9 @@ function buildDiscoverParams(
   // Rating sorts need a vote floor or a single 10/10 obscurity wins.
   const params: Record<string, string> = {
     sort_by: sort,
-    'vote_count.gte': f.sort === 'vote_average.desc' ? '200' : '50',
+    'vote_count.gte': String(
+      f.minVotes ?? (f.sort === 'vote_average.desc' ? 200 : 50),
+    ),
   };
   if (f.genreId) params.with_genres = String(f.genreId);
   if (f.year) params[yearKey] = f.year;
@@ -476,7 +481,11 @@ async function fetchMovieList(
   if (!hasTmdbKey) return [];
   const [genres, data] = await Promise.all([
     loadMovieGenres(),
-    tmdb<{ results: TmdbMovieResult[] }>(path, { language: tmdbLang(), ...params }),
+    tmdb<{ results: TmdbMovieResult[] }>(path, {
+      language: tmdbLang(),
+      include_adult: 'false',
+      ...params,
+    }),
   ]);
   return data.results
     .filter((r) => r.poster_path)

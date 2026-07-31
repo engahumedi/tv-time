@@ -87,7 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       sub.subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function signUp(email: string, password: string) {

@@ -54,14 +54,16 @@ export function Import() {
   function toggleShow(key: string) {
     setExcludedShows((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
   function toggleMovie(key: string) {
     setExcludedMovies((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -176,7 +178,6 @@ export function Import() {
         (g) => g.resolved && g.match && !excludedMovies.has(movieKey(g)),
       ).length,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups, movieGroups, excludedShows, excludedMovies]);
 
   return (

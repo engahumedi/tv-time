@@ -41,7 +41,15 @@ export function RandomPickModal({ onClose }: { onClose: () => void }) {
       setError(false);
       try {
         const page = 1 + Math.floor(Math.random() * 5);
-        const results = await discoverMovies({ genreId, sort: 'popularity.desc', page });
+        // "Watch this tonight" should be a real recommendation, so ask for a
+        // meaningfully-rated film. The default 50-vote floor still let through
+        // straight-to-TV filler.
+        const results = await discoverMovies({
+          genreId,
+          sort: 'popularity.desc',
+          page,
+          minVotes: 300,
+        });
         if (cancelled) return;
         setPool(results);
         setPick(results.length ? results[Math.floor(Math.random() * results.length)] : null);

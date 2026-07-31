@@ -442,10 +442,31 @@ Three fixes, each verified against the live system rather than assumed:
   throw (boundary caught it, no white screen) and confirming every route still
   renders clean afterwards.
 
-**Known, not yet done** (measured while auditing, left deliberately):
-- Discover surfaces obscure titles — **29 of 100** sampled had fewer than 50
-  votes. A `vote_count.gte` floor on the browse/roulette endpoints is the fix.
-  (`include_adult=false` is set on search but not on the list endpoints; note
-  TMDB's `adult` flag misses softcore titles, so the vote floor matters more.)
+**Content quality** — re-measured per tab, which changed the picture:
+- Top-rated, Filters and the roulette already had vote floors and showed **0%**
+  obscure titles. Only the **trending** tabs (the default view) had none, at
+  ~26-28% under 50 votes. TMDB's `/trending` is a curated list and **ignores**
+  `vote_count.gte`, so a floor there would have to be client-side.
+- Trending is deliberately left unfiltered: it is meant to show what's trending,
+  and a vote floor would hide the most anticipated releases (Avengers: Doomsday
+  was in the sample with 0 votes).
+- The reported bad pick came from the **roulette**, and a vote floor of 50 did
+  not stop it (that film has 167 votes). The roulette now asks for **300+**,
+  which removes it — verified against the live pool.
+- `include_adult=false` now applies to every list endpoint, not just search.
+  (Note TMDB's `adult` flag misses softcore titles, so the vote floor does the
+  real work.)
+
+**Known, not yet done:**
 - **No PWA** — no manifest or service worker, despite the app being local-first
   and a natural fit for install + offline.
+
+**Linting** — `npm run lint` was advertised but broken: no ESLint config and no
+ESLint dependency at all, so it errored for anyone who ran it. Now a flat config
+(typescript-eslint + react-hooks + react-refresh) with 0 errors. Two React-
+compiler rules (`set-state-in-effect`, `purity`) are set to `warn`: the
+remaining hits are deliberate reset-on-prop-change effects and a `Date.now()`
+staleness read. Real fixes it surfaced: `StarRating` minted its SVG gradient id
+with `Math.random()` on every render (now `useId()` — verified stable and unique
+in the browser), three ternaries used as statements, an `any` in `vite.config`,
+and two dead eslint-disable directives.

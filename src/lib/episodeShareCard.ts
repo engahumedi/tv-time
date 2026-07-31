@@ -188,7 +188,8 @@ function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numb
     const rad = i % 2 === 0 ? r : r * 0.45;
     const x = cx + Math.cos(ang) * rad;
     const y = cy + Math.sin(ang) * rad;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
   }
   ctx.closePath();
   ctx.fillStyle = fill;
