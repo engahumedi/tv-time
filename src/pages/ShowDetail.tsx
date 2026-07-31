@@ -26,11 +26,11 @@ import {
   toggleFavorite,
 } from '../lib/repo';
 import { celebrate } from '../lib/celebrate';
-import { getImdbRating, type ImdbRating } from '../lib/omdb';
+import { getExternalRatings, type ExternalRatings } from '../lib/omdb';
 import { formatDate } from '../lib/format';
 import { Poster } from '../components/Poster';
 import { StatusBadge } from '../components/StatusBadge';
-import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
+import { TmdbRating, ImdbRating as ImdbBadge, RottenTomatoes } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { WhereToWatch } from '../components/WhereToWatch';
 import { EpisodeModal } from '../components/EpisodeModal';
@@ -63,7 +63,7 @@ export function ShowDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [imdb, setImdb] = useState<ImdbRating | null>(null);
+  const [imdb, setImdb] = useState<ExternalRatings | null>(null);
   const [selectedEp, setSelectedEp] = useState<Episode | null>(null);
   const [showLists, setShowLists] = useState(false);
   const [tagInput, setTagInput] = useState('');
@@ -109,7 +109,7 @@ export function ShowDetail() {
     setImdb(null);
     if (!imdbId) return;
     let cancelled = false;
-    getImdbRating(imdbId).then((r) => {
+    getExternalRatings(imdbId).then((r) => {
       if (!cancelled) setImdb(r);
     });
     return () => {
@@ -217,7 +217,8 @@ export function ShowDetail() {
             {(show.voteAverage || imdb) && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <TmdbRating value={show.voteAverage} />
-                <ImdbBadge value={imdb?.rating} />
+                <ImdbBadge value={imdb?.imdb?.rating} />
+                <RottenTomatoes value={imdb?.rottenTomatoes} />
               </div>
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">

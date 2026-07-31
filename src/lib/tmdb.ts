@@ -299,6 +299,30 @@ interface TmdbSeasonDetail {
   }[];
 }
 
+/**
+ * Just the IMDb id for a TMDB title. List endpoints don't return one, so
+ * poster cards need this before they can look up an IMDb/RT score. Responses
+ * are cached by the edge proxy, and callers cache the resulting rating.
+ */
+export async function getImdbIdFor(
+  kind: 'tv' | 'movie',
+  id: number,
+): Promise<string | null> {
+  if (!hasTmdbKey || id < 0) return null;
+  try {
+    if (kind === 'movie') {
+      const d = await tmdb<{ imdb_id: string | null }>(`/movie/${id}`, {
+        language: tmdbLang(),
+      });
+      return d.imdb_id || null;
+    }
+    const d = await tmdb<{ imdb_id: string | null }>(`/tv/${id}/external_ids`, {});
+    return d.imdb_id || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Full show detail (used when adding a show to the library). */
 export async function getShowDetail(id: number): Promise<Show> {
   if (!hasTmdbKey || id < 0) {

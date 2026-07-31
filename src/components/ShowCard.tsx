@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Poster } from './Poster';
-import { TmdbRating } from './Rating';
+import { PosterRating } from './PosterRating';
 import type { Show } from '../types';
 
 /** Poster tile used across grids and rails. */
@@ -24,7 +24,7 @@ export function ShowCard({
           alt={show.name}
           className="h-full w-full transition-transform duration-500 group-hover:scale-105"
         />
-        <TmdbRating value={show.voteAverage} className="absolute end-1.5 top-1.5" />
+        <PosterRating kind="tv" tmdbId={show.id} fallback={show.voteAverage} className="absolute end-1.5 top-1.5" />
       </div>
       <p className="mt-2 truncate text-sm font-semibold text-fg">
         {show.name}

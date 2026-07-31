@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Heart, Check, Trash2, Plus, Bookmark, Share2 } from 'lucide-react';
 import { getMovieDetail, img } from '../lib/tmdb';
-import { getImdbRating, type ImdbRating } from '../lib/omdb';
+import { getExternalRatings, type ExternalRatings } from '../lib/omdb';
 import { useMovie } from '../lib/hooks';
 import {
   addMovie,
@@ -16,7 +16,7 @@ import {
 import { celebrate } from '../lib/celebrate';
 import { formatDate } from '../lib/format';
 import { Poster } from '../components/Poster';
-import { TmdbRating, ImdbRating as ImdbBadge } from '../components/Rating';
+import { TmdbRating, ImdbRating as ImdbBadge, RottenTomatoes } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { ListPickerModal } from '../components/ListPickerModal';
 import { WhereToWatch } from '../components/WhereToWatch';
@@ -32,7 +32,7 @@ export function MovieDetail() {
   const stored = useMovie(movieId);
   const [preview, setPreview] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imdb, setImdb] = useState<ImdbRating | null>(null);
+  const [imdb, setImdb] = useState<ExternalRatings | null>(null);
   const [showLists, setShowLists] = useState(false);
   const [sharing, setSharing] = useState(false);
 
@@ -60,7 +60,7 @@ export function MovieDetail() {
     setImdb(null);
     if (!imdbId) return;
     let cancelled = false;
-    getImdbRating(imdbId).then((r) => !cancelled && setImdb(r));
+    getExternalRatings(imdbId).then((r) => !cancelled && setImdb(r));
     return () => {
       cancelled = true;
     };
@@ -130,7 +130,8 @@ export function MovieDetail() {
             {(movie.voteAverage || imdb) && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <TmdbRating value={movie.voteAverage} />
-                <ImdbBadge value={imdb?.rating} />
+                <ImdbBadge value={imdb?.imdb?.rating} />
+                <RottenTomatoes value={imdb?.rottenTomatoes} />
               </div>
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">

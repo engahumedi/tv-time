@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Check, Bookmark } from 'lucide-react';
 import { Poster } from './Poster';
-import { TmdbRating } from './Rating';
+import { PosterRating } from './PosterRating';
 import { useMovie } from '../lib/hooks';
 import { setMovieWatched, setMovieWatchlist } from '../lib/repo';
 import { getMovieDetail } from '../lib/tmdb';
@@ -49,7 +49,7 @@ export function MovieCard({ movie }: { movie: Movie }) {
         <Link to={`/movie/${movie.id}`} className="block h-full w-full">
           <Poster path={movie.posterPath} alt={movie.title} className="h-full w-full" />
         </Link>
-        <TmdbRating value={movie.voteAverage} className="pointer-events-none absolute end-1.5 top-1.5" />
+        <PosterRating kind="movie" tmdbId={movie.id} fallback={movie.voteAverage} className="pointer-events-none absolute end-1.5 top-1.5" />
         {!watched && (
           <button
             onClick={toggleWatchlist}
