@@ -30,7 +30,7 @@ import { getExternalRatings, type ExternalRatings } from '../lib/omdb';
 import { formatDate } from '../lib/format';
 import { Poster } from '../components/Poster';
 import { StatusBadge } from '../components/StatusBadge';
-import { TmdbRating, ImdbRating as ImdbBadge, RottenTomatoes, Metacritic } from '../components/Rating';
+import { TmdbRating, ImdbRating as ImdbBadge, Metacritic } from '../components/Rating';
 import { StarRating } from '../components/StarRating';
 import { WhereToWatch } from '../components/WhereToWatch';
 import { EpisodeModal } from '../components/EpisodeModal';
@@ -218,7 +218,6 @@ export function ShowDetail() {
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <TmdbRating value={show.voteAverage} />
                 <ImdbBadge value={imdb?.imdb?.rating} />
-                <RottenTomatoes value={imdb?.rottenTomatoes} />
                 <Metacritic value={imdb?.metacritic} />
               </div>
             )}

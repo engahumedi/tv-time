@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { TmdbRating } from './Rating';
-import { hasOmdbKey } from '../lib/omdb';
-import { getRatingsForTmdb } from '../lib/ratings';
+import { getImdbRatingForTmdb, hasRatingsSource } from '../lib/ratings';
 
 /** Compact IMDb pill sized for a poster corner. */
 function ImdbPill({ value, className = '' }: { value: string; className?: string }) {
@@ -36,12 +35,12 @@ export function PosterRating({
   fallback: number | undefined;
   className?: string;
 }) {
-  const [imdb, setImdb] = useState<string | null>(null);
+  const [imdb, setImdb] = useState<number | null>(null);
   const anchor = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     setImdb(null);
-    if (!hasOmdbKey || !tmdbId || tmdbId < 0) return;
+    if (!hasRatingsSource || !tmdbId || tmdbId < 0) return;
     const el = anchor.current;
     if (!el) return;
     // Observe the poster itself — the badge can be zero-sized before it loads.
@@ -49,9 +48,9 @@ export function PosterRating({
     let cancelled = false;
 
     const start = () => {
-      getRatingsForTmdb(kind, tmdbId)
+      getImdbRatingForTmdb(kind, tmdbId)
         .then((r) => {
-          if (!cancelled && r?.imdb) setImdb(r.imdb.rating);
+          if (!cancelled && r !== null) setImdb(r);
         })
         .catch(() => {});
     };
@@ -82,7 +81,7 @@ export function PosterRating({
 
   return (
     <span ref={anchor} className={className}>
-      {imdb ? <ImdbPill value={imdb} /> : <TmdbRating value={fallback} />}
+      {imdb !== null ? <ImdbPill value={imdb.toFixed(1)} /> : <TmdbRating value={fallback} />}
     </span>
   );
 }

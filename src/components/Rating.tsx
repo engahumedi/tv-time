@@ -20,36 +20,7 @@ export function TmdbRating({
   );
 }
 
-/**
- * Rotten Tomatoes tomatometer. Red when Fresh (≥60), green when Rotten —
- * matching how RT itself splits the two.
- */
-export function RottenTomatoes({
-  value,
-  className = '',
-}: {
-  value: number | null | undefined;
-  className?: string;
-}) {
-  if (value === null || value === undefined) return null;
-  const fresh = value >= 60;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold text-white ${
-        fresh ? 'bg-[#fa320a]' : 'bg-[#0ac855] text-black'
-      } ${className}`}
-      title={fresh ? 'Rotten Tomatoes — Fresh' : 'Rotten Tomatoes — Rotten'}
-    >
-      <span className="tracking-tight">RT</span>
-      {value}%
-    </span>
-  );
-}
-
-/**
- * Metacritic score. OMDb carries it for far more films than it does Rotten
- * Tomatoes, so it fills the gap when there's no tomatometer.
- */
+/** Metacritic score, shown on detail pages when OMDb has one. */
 export function Metacritic({
   value,
   className = '',

@@ -53,6 +53,147 @@ async function deleteAccount(req: Request): Promise<Response> {
   return json(200, { ok: true });
 }
 
+// ---------------------------------------------------------------------------
+// IMDb ratings (batch)
+//
+//   GET /functions/v1/api/ratings?tv=1396,94997&movie=550
+//   -> { "tv:1396": 9.5, "movie:550": 8.8 }
+//
+// Ratings come from IMDb's official daily dataset, mirrored into the
+// `imdb_ratings` table — full coverage, no third-party rate limit, and one
+// request serves a whole poster grid. TMDB list endpoints don't return an IMDb
+// id, so the tmdb -> imdb mapping is resolved once and cached in `tmdb_imdb`
+// for every user after that.
+// ---------------------------------------------------------------------------
+
+const MAX_IDS = 120;
+
+function sbHeaders(): Record<string, string> {
+  return {
+    apikey: SB_SERVICE,
+    Authorization: `Bearer ${SB_SERVICE}`,
+    'content-type': 'application/json',
+  };
+}
+
+function parseIds(raw: string | null): number[] {
+  if (!raw) return [];
+  const out: number[] = [];
+  for (const part of raw.split(',')) {
+    const n = Number(part.trim());
+    if (Number.isInteger(n) && n > 0 && !out.includes(n)) out.push(n);
+    if (out.length >= MAX_IDS) break;
+  }
+  return out;
+}
+
+/** Look up cached tmdb -> imdb mappings for one kind. */
+async function knownMappings(
+  kind: 'tv' | 'movie',
+  ids: number[],
+): Promise<Map<number, string | null>> {
+  const map = new Map<number, string | null>();
+  if (ids.length === 0) return map;
+  const url = `${SB_URL}/rest/v1/tmdb_imdb?select=tmdb_id,imdb_id&kind=eq.${kind}&tmdb_id=in.(${ids.join(',')})`;
+  const res = await fetch(url, { headers: sbHeaders() });
+  if (!res.ok) return map;
+  for (const r of (await res.json()) as { tmdb_id: number; imdb_id: string | null }[]) {
+    map.set(r.tmdb_id, r.imdb_id);
+  }
+  return map;
+}
+
+/** Ask TMDB for a title's IMDb id (only for ids we haven't mapped yet). */
+async function resolveImdbId(kind: 'tv' | 'movie', id: number): Promise<string | null> {
+  try {
+    const path = kind === 'movie' ? `/movie/${id}` : `/tv/${id}/external_ids`;
+    const u = new URL(TMDB_BASE + path);
+    u.searchParams.set('api_key', TMDB_KEY);
+    const r = await fetch(u.toString());
+    if (!r.ok) return null;
+    const d = (await r.json()) as { imdb_id?: string | null };
+    return d.imdb_id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve missing mappings (bounded concurrency) and persist them. */
+async function fillMappings(
+  kind: 'tv' | 'movie',
+  missing: number[],
+  into: Map<number, string | null>,
+): Promise<void> {
+  if (missing.length === 0) return;
+  const CONCURRENCY = 12;
+  let cursor = 0;
+  const rows: { kind: string; tmdb_id: number; imdb_id: string | null }[] = [];
+  async function worker() {
+    while (cursor < missing.length) {
+      const id = missing[cursor++];
+      const imdbId = await resolveImdbId(kind, id);
+      into.set(id, imdbId);
+      rows.push({ kind, tmdb_id: id, imdb_id: imdbId });
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, missing.length) }, worker),
+  );
+  if (rows.length) {
+    // Cache the mapping (including "no imdb id") so nobody re-resolves it.
+    await fetch(`${SB_URL}/rest/v1/tmdb_imdb?on_conflict=kind,tmdb_id`, {
+      method: 'POST',
+      headers: { ...sbHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows),
+    }).catch(() => {});
+  }
+}
+
+async function ratingsHandler(url: URL): Promise<Response> {
+  if (!SB_URL || !SB_SERVICE) return json(503, { error: 'unavailable' });
+  const tv = parseIds(url.searchParams.get('tv'));
+  const movie = parseIds(url.searchParams.get('movie'));
+  if (tv.length === 0 && movie.length === 0) return json(200, {});
+
+  const [tvMap, movieMap] = await Promise.all([
+    knownMappings('tv', tv),
+    knownMappings('movie', movie),
+  ]);
+  await Promise.all([
+    fillMappings('tv', tv.filter((i) => !tvMap.has(i)), tvMap),
+    fillMappings('movie', movie.filter((i) => !movieMap.has(i)), movieMap),
+  ]);
+
+  // One lookup for every resolved IMDb id.
+  const tconsts = [...tvMap.values(), ...movieMap.values()].filter(Boolean) as string[];
+  const byTconst = new Map<string, number>();
+  if (tconsts.length) {
+    const q = `${SB_URL}/rest/v1/imdb_ratings?select=tconst,rating&tconst=in.(${tconsts.join(',')})`;
+    const r = await fetch(q, { headers: sbHeaders() });
+    if (r.ok) {
+      for (const row of (await r.json()) as { tconst: string; rating: string }[]) {
+        byTconst.set(row.tconst, Number(row.rating));
+      }
+    }
+  }
+
+  const out: Record<string, number> = {};
+  for (const [kind, map] of [['tv', tvMap], ['movie', movieMap]] as const) {
+    for (const [id, tconst] of map) {
+      const rating = tconst ? byTconst.get(tconst) : undefined;
+      if (rating !== undefined) out[`${kind}:${id}`] = rating;
+    }
+  }
+  return new Response(JSON.stringify(out), {
+    headers: {
+      ...CORS,
+      'content-type': 'application/json',
+      // Ratings drift slowly; a few hours of caching is plenty.
+      'cache-control': 'public, max-age=21600, s-maxage=21600, stale-while-revalidate=604800',
+    },
+  });
+}
+
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -70,6 +211,10 @@ Deno.serve(async (req: Request) => {
 
     if (path.endsWith('/account') && req.method === 'DELETE') {
       return await deleteAccount(req);
+    }
+
+    if (path.endsWith('/ratings')) {
+      return await ratingsHandler(url);
     }
 
     let target: URL;

@@ -1,91 +1,118 @@
-import { getExternalRatings, hasOmdbKey, type ExternalRatings } from './omdb';
-import { getImdbIdFor } from './tmdb';
+import { functionsBase, supabaseAnonKey } from './supabase';
 
 /**
- * Ratings for a title identified by its TMDB id (what cards and lists have).
+ * IMDb ratings for poster cards.
  *
- * TMDB's list endpoints don't include an IMDb id, so this resolves it from the
- * detail endpoint first and then asks OMDb. Both hops are cached by the edge
- * proxy for 24h, and results (including "no rating") are cached here for a week
- * so scrolling a grid twice costs nothing.
+ * Ratings come from IMDb's official daily dataset mirrored into our own table,
+ * served by the `/api/ratings` edge endpoint. Requests made in the same tick are
+ * coalesced into one batch, so a grid of 60 posters costs a single round trip
+ * instead of two requests per card. Answers (including "no rating") are cached
+ * in memory and in localStorage for a day.
  */
 
-const TTL = 7 * 864e5; // a week
-const STORE_PREFIX = 'st:rt:';
+const PROXY = functionsBase();
+export const hasRatingsSource = Boolean(PROXY);
 
-interface Cached {
-  t: number;
-  v: ExternalRatings | null;
-}
+const TTL = 864e5; // a day — the dataset refreshes daily
+const STORE_PREFIX = 'st:imdb:';
+/** Keep the query string well inside any URL limit. */
+const MAX_BATCH = 100;
+/** Wait this long to gather ids before firing a batch. */
+const BATCH_MS = 60;
 
-const memory = new Map<string, ExternalRatings | null>();
+const memory = new Map<string, number | null>();
 
-function read(key: string): Cached | undefined {
+function readStored(key: string): number | null | undefined {
   try {
     const raw = localStorage.getItem(STORE_PREFIX + key);
     if (!raw) return undefined;
-    const parsed = JSON.parse(raw) as Cached;
-    if (Date.now() - parsed.t > TTL) return undefined;
-    return parsed;
+    const { t, v } = JSON.parse(raw) as { t: number; v: number | null };
+    if (Date.now() - t > TTL) return undefined;
+    return v;
   } catch {
     return undefined;
   }
 }
 
-function write(key: string, v: ExternalRatings | null): void {
+function store(key: string, v: number | null): void {
   memory.set(key, v);
   try {
     localStorage.setItem(STORE_PREFIX + key, JSON.stringify({ t: Date.now(), v }));
   } catch {
-    /* quota / private mode — the in-memory cache still helps */
+    /* quota / private mode — memory cache still applies */
   }
 }
 
-// Cap look-ups in flight: a Discover grid can hold 60+ cards and we don't want
-// to fire hundreds of requests at once. Each look-up is two chained requests,
-// so this is the main lever on how fast badges fill in.
-const MAX_INFLIGHT = 10;
-let inflight = 0;
-const queue: (() => void)[] = [];
+type Pending = { key: string; resolve: (v: number | null) => void };
 
-function acquire(): Promise<void> {
-  if (inflight < MAX_INFLIGHT) {
-    inflight++;
-    return Promise.resolve();
+let queue: Pending[] = [];
+let timer: ReturnType<typeof setTimeout> | null = null;
+
+async function flush(): Promise<void> {
+  timer = null;
+  const batch = queue.slice(0, MAX_BATCH);
+  queue = queue.slice(MAX_BATCH);
+  if (queue.length > 0) schedule(); // more waiting — keep draining
+  if (batch.length === 0) return;
+
+  const tv: number[] = [];
+  const movie: number[] = [];
+  for (const p of batch) {
+    const [kind, id] = p.key.split(':');
+    (kind === 'movie' ? movie : tv).push(Number(id));
   }
-  return new Promise((resolve) => queue.push(resolve));
+
+  let data: Record<string, number> = {};
+  try {
+    const qs = new URLSearchParams();
+    if (tv.length) qs.set('tv', tv.join(','));
+    if (movie.length) qs.set('movie', movie.join(','));
+    const headers: Record<string, string> = {};
+    if (supabaseAnonKey) {
+      headers.apikey = supabaseAnonKey;
+      headers.Authorization = `Bearer ${supabaseAnonKey}`;
+    }
+    const res = await fetch(`${PROXY}/api/ratings?${qs}`, { headers });
+    if (res.ok) data = (await res.json()) as Record<string, number>;
+  } catch {
+    /* offline — resolve everyone as unknown below */
+  }
+
+  for (const p of batch) {
+    const v = typeof data[p.key] === 'number' ? data[p.key] : null;
+    store(p.key, v);
+    p.resolve(v);
+  }
 }
 
-function release(): void {
-  const next = queue.shift();
-  if (next) next();
-  else inflight--;
+function schedule(): void {
+  if (timer === null) timer = setTimeout(flush, BATCH_MS);
 }
 
-/** Ratings for a TMDB title. Returns null when nothing is available. */
-export async function getRatingsForTmdb(
+/**
+ * The IMDb rating for a TMDB title, or null when IMDb has none.
+ * Safe to call for every visible card — calls are batched and cached.
+ */
+export function getImdbRatingForTmdb(
   kind: 'tv' | 'movie',
   tmdbId: number,
-): Promise<ExternalRatings | null> {
-  if (!hasOmdbKey || !tmdbId || tmdbId < 0) return null;
+): Promise<number | null> {
+  if (!hasRatingsSource || !tmdbId || tmdbId < 0) return Promise.resolve(null);
   const key = `${kind}:${tmdbId}`;
-  if (memory.has(key)) return memory.get(key)!;
-  const cached = read(key);
-  if (cached) {
-    memory.set(key, cached.v);
-    return cached.v;
+  if (memory.has(key)) return Promise.resolve(memory.get(key)!);
+  const stored = readStored(key);
+  if (stored !== undefined) {
+    memory.set(key, stored);
+    return Promise.resolve(stored);
   }
-
-  await acquire();
-  try {
-    const imdbId = await getImdbIdFor(kind, tmdbId);
-    const value = imdbId ? await getExternalRatings(imdbId) : null;
-    write(key, value);
-    return value;
-  } catch {
-    write(key, null); // negative-cache so a broken title isn't retried forever
-    return null;
-  } finally {
-    release();
-  }
+  return new Promise((resolve) => {
+    queue.push({ key, resolve });
+    if (queue.length >= MAX_BATCH && timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+      void flush();
+    } else {
+      schedule();
+    }
+  });
 }

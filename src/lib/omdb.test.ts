@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 /**
- * Parsing tests for the OMDb ratings payload. These lock in the shapes seen
- * from the real API: movies usually carry IMDb + Metacritic and sometimes a
- * tomatometer; TV series usually carry IMDb only.
+ * Parsing tests for the OMDb ratings payload. OMDb now only backs the detail
+ * pages (IMDb + Metacritic); poster grids read IMDb from our own mirror of the
+ * official dataset. Movies usually carry both scores, series IMDb only.
  */
 
 const FORD_V_FERRARI = {
@@ -58,22 +58,20 @@ describe('getExternalRatings', () => {
     vi.unstubAllEnvs();
   });
 
-  it('pulls IMDb, Rotten Tomatoes and Metacritic from a movie payload', async () => {
+  it('pulls IMDb and Metacritic from a movie payload', async () => {
     mockOmdb(FORD_V_FERRARI);
     const { getExternalRatings } = await load();
     const r = await getExternalRatings('tt1950186');
     expect(r?.imdb?.rating).toBe('8.1');
-    expect(r?.rottenTomatoes).toBe(92);
     expect(r?.metacritic).toBe(81);
   });
 
-  it('returns IMDb only when a series has no tomatometer or Metascore', async () => {
+  it('returns IMDb only when a series has no Metascore', async () => {
     mockOmdb(THE_ROOKIE);
     const { getExternalRatings } = await load();
     const r = await getExternalRatings('tt7587890');
     expect(r?.imdb?.rating).toBe('8.0');
-    // Badges hide on null rather than rendering a bogus 0.
-    expect(r?.rottenTomatoes).toBeNull();
+    // The badge hides on null rather than rendering a bogus 0.
     expect(r?.metacritic).toBeNull();
   });
 
@@ -82,7 +80,6 @@ describe('getExternalRatings', () => {
     const { getExternalRatings } = await load();
     const r = await getExternalRatings('tt0000000');
     expect(r?.imdb).toBeNull();
-    expect(r?.rottenTomatoes).toBeNull();
     expect(r?.metacritic).toBeNull();
   });
 

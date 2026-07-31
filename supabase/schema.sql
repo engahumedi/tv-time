@@ -420,3 +420,30 @@ create policy "own comment insert" on public.activity_comments for insert
   with check (actor_id = auth.uid() and public.can_view(owner_id));
 drop policy if exists "own comment delete" on public.activity_comments;
 create policy "own comment delete" on public.activity_comments for delete using (actor_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- IMDb ratings mirror (public reference data)
+--
+-- Loaded from IMDb's official daily dataset (https://datasets.imdbws.com/
+-- title.ratings.tsv.gz). Gives full coverage with no third-party rate limit,
+-- and lets one query answer a whole poster grid. `tmdb_imdb` caches the
+-- tmdb -> imdb id mapping, which TMDB's list endpoints don't return.
+-- Both are world-readable; only the service role (edge function) writes.
+-- ---------------------------------------------------------------------------
+create table if not exists public.imdb_ratings (
+  tconst text primary key,
+  rating numeric(3,1) not null,
+  votes  integer not null
+);
+create table if not exists public.tmdb_imdb (
+  kind    text    not null check (kind in ('tv','movie')),
+  tmdb_id integer not null,
+  imdb_id text,
+  primary key (kind, tmdb_id)
+);
+alter table public.imdb_ratings enable row level security;
+alter table public.tmdb_imdb   enable row level security;
+drop policy if exists "read imdb ratings" on public.imdb_ratings;
+create policy "read imdb ratings" on public.imdb_ratings for select using (true);
+drop policy if exists "read tmdb imdb" on public.tmdb_imdb;
+create policy "read tmdb imdb" on public.tmdb_imdb for select using (true);

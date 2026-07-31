@@ -16,8 +16,6 @@ export interface ImdbRating {
 /** Everything OMDb knows about a title's scores. */
 export interface ExternalRatings {
   imdb: ImdbRating | null;
-  /** Rotten Tomatoes tomatometer as a whole number, e.g. 92. */
-  rottenTomatoes: number | null;
   /** Metacritic score out of 100. */
   metacritic: number | null;
 }
@@ -27,7 +25,6 @@ interface OmdbResponse {
   imdbRating?: string;
   imdbVotes?: string;
   Metascore?: string;
-  Ratings?: { Source: string; Value: string }[];
 }
 
 // In-memory cache so revisiting a show doesn't re-hit OMDb.
@@ -79,8 +76,9 @@ export async function getImdbRating(
 }
 
 /**
- * IMDb + Rotten Tomatoes + Metacritic in one lookup. OMDb returns them together
- * in a `Ratings` array, so this costs exactly the same as the IMDb-only call.
+ * IMDb + Metacritic in one lookup — OMDb returns both in the same payload, so
+ * this costs exactly the same as the IMDb-only call. Used by the detail pages;
+ * poster grids read IMDb from our own dataset mirror instead.
  */
 export async function getExternalRatings(
   imdbId: string | undefined,
@@ -93,11 +91,9 @@ export async function getExternalRatings(
       fullCache.set(imdbId, null);
       return null;
     }
-    const rt = data.Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value;
     const meta = data.Metascore && data.Metascore !== 'N/A' ? Number(data.Metascore) : null;
     const value: ExternalRatings = {
       imdb: toImdb(data),
-      rottenTomatoes: rt ? Number(rt.replace('%', '')) : null,
       metacritic: Number.isFinite(meta as number) ? (meta as number) : null,
     };
     // Also warm the IMDb-only cache — same payload, no reason to refetch.
