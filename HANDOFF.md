@@ -20,7 +20,7 @@ history over.
 - **Repo:** `engahumedi/tv-time`
 - **Working branch:** `claude/showtrack-tv-tracker-27fepl` — this is the **only** branch on the remote and the **default** branch; GitHub Pages deploys directly from it (see `.github/workflows/deploy-pages.yml`). There is no separate `main`, so there's currently no PR (a base branch would have to be created first).
 - **Live site (GitHub Pages):** https://engahumedi.github.io/tv-time/
-- **Latest commit:** `b3acc04` (Serve IMDb ratings from the official dataset; drop Rotten Tomatoes)
+- **Latest commit:** see `git log -1` — the branch is the source of truth.
 
 > **What changed since the original handoff:** two large batches were added on
 > top of §13 — (a) a full **social layer** (public profiles, follow-with-
@@ -273,20 +273,21 @@ counter**, then the clear "All done!" screen. `commitMovies` takes an
 
 ## 9. Testing & verification (how to check work locally)
 
-- **Unit tests:** `npm test` (vitest, currently **29**) — `importParser.test.ts`, `match.test.ts`, `stats.test.ts`. Keep them green.
+- **Unit tests:** `npm test` (vitest, currently **36**) — `importParser.test.ts`, `match.test.ts`, `stats.test.ts`. Keep them green.
 - **Build:** `npm run build` (tsc has `noUnusedLocals` — remove unused imports/vars).
-- **Browser/E2E:** Chromium is preinstalled at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`; global Playwright at `/opt/node22/lib/node_modules/playwright`. Import it in an `.mjs` script as:
-  ```js
-  import pkg from '/opt/node22/lib/node_modules/playwright/index.js';
-  const { chromium } = pkg;
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
-  ```
-- **Dev server gotchas (sandbox):**
-  - Launch detached so the Bash tool doesn't kill it: `(... npm run dev -- --port 5199 > log 2>&1 &)`.
-  - **Do NOT `pkill -f vite`** — it can match and kill the tool's own shell (exit 144). Use a fresh port instead.
-  - To exercise the auth/onboarding + real-data paths, launch with dummy Supabase env so `hasTmdbKey`/auth are enabled: `VITE_SUPABASE_URL="https://demo.supabase.co" VITE_SUPABASE_ANON_KEY="demo-anon-key" npm run dev -- --port 5199`.
-  - **Network to external hosts (TMDB/posters) is blocked in the sandbox** — search/matching/posters won't load locally, but parsing, UI, routing, and IndexedDB all work. Seed IndexedDB directly via `page.evaluate` + a raw `indexedDB.open('showtrack')` transaction to test Profile/lists/detail with data.
-  - Use the scratchpad dir for temp files. Never commit personal-data exports or temp test files that read them.
+- **Browser/E2E:** drive a real build with Playwright + Chromium (paths vary by
+  environment; in a sandbox the browser is usually pre-installed — don't run
+  `playwright install`). Always verify a **production** build (`npm run build`
+  then serve `dist` at base `/tv-time/`), not just the dev server: a past
+  chunking change worked in dev and blanked the page in prod.
+- **Dev-server notes:** launch detached so the tooling doesn't kill it, and
+  prefer a fresh port over `pkill -f vite` (that pattern can match the calling
+  shell). To exercise auth/real-data paths, start with placeholder Supabase env
+  vars so `hasTmdbKey`/auth switch on.
+- **Sandbox networking:** outbound calls to TMDB/posters/Supabase are often
+  blocked from the sandboxed browser — parsing, UI, routing and IndexedDB still
+  work. Seed IndexedDB directly via `page.evaluate` to test data-driven pages.
+- Keep temp files out of the repo. Never commit personal-data exports.
 
 ---
 
@@ -318,10 +319,10 @@ counter**, then the clear "All done!" screen. `commitMovies` takes an
 
 ## 12. Security reminders
 
-- The **Supabase Personal Access Token** the owner shared earlier (used to apply migrations) must be **revoked** in Supabase → Account → Access Tokens when not actively migrating. Never store it in the repo or in any file.
-- Never commit TV Time export data (it contains the user's email, IPs, tokens). Extract only to the ephemeral scratchpad and delete after testing.
+- **Supabase Personal Access Tokens** (used to apply migrations or deploy the Edge Function) must be **revoked** in Supabase → Account → Access Tokens as soon as the work is done, and never written to the repo or any file.
+- Never commit TV Time export data — it contains the user's email, IP addresses and tokens. Extract it to a temporary directory and delete it after testing.
 - The Supabase anon key is public by design (RLS enforces per-user access). TMDB/OMDb keys stay server-side in the Edge Function proxy.
-- A PAT was used to deploy the Edge Function (§6) and create a demo user; it must be revoked when idle. The **service_role** key (fetchable via the Management API `…/api-keys`) is all-powerful — never print it, store it, or commit it.
+- The **service_role** key bypasses every RLS policy. It belongs only in GitHub Actions secrets (`SUPABASE_SERVICE_ROLE_KEY`) — never printed, committed, or pasted into chat. The **anon** key is public by design; RLS is what protects user data.
 
 ---
 
@@ -415,3 +416,36 @@ send `User-Agent: curl/8.5.0`. ~1,400 rows/s at 2,500 rows per statement.
 0% of TV series and ~30% of films via OMDb (its `tomatoes=true` parameter added
 nothing, Wikidata was worse: 1/20 TV, 3/20 films), and there is no free public
 RT API. MDBList is the only credible aggregator but needs a (free) API key.
+
+---
+
+## 16. Performance & resilience (measured)
+
+Three fixes, each verified against the live system rather than assumed:
+
+- **First-device sync was the slowest path in the app.** `cloud.pull()` rebuilt
+  the episode cache one show at a time; each show costs a TMDB detail call plus
+  one per season (**3.3s measured**), so a 58-show library took **~3.2 minutes**
+  on a fresh sign-in. It now runs **6 shows concurrently** (~30s), and a failing
+  show no longer stalls the rest. The worker-pool was checked for
+  process-exactly-once, the concurrency cap, and error isolation.
+- **Rating look-ups were cold.** `tmdb_imdb` held only 45 mappings, so the first
+  viewer of any poster paid the id resolution: **3.10s** for a cold grid of 20
+  vs **0.82s** warm (3.8x). `scripts/warm-imdb-mappings.mjs` walks the
+  trending/top/popular lists and resolves mappings ahead of time; it runs nightly
+  right after the ratings refresh. After seeding ~950 mappings a full 56-title
+  Discover grid resolves in **~1.2s**.
+- **No error boundary existed** — any render crash blanked the whole app (this
+  actually happened once with a bad vendor chunk). `components/ErrorBoundary.tsx`
+  now wraps the root and shows a reload card; its strings are hard-coded because
+  i18n itself could be the thing that failed. Verified by making a component
+  throw (boundary caught it, no white screen) and confirming every route still
+  renders clean afterwards.
+
+**Known, not yet done** (measured while auditing, left deliberately):
+- Discover surfaces obscure titles — **29 of 100** sampled had fewer than 50
+  votes. A `vote_count.gte` floor on the browse/roulette endpoints is the fix.
+  (`include_adult=false` is set on search but not on the list endpoints; note
+  TMDB's `adult` flag misses softcore titles, so the vote floor matters more.)
+- **No PWA** — no manifest or service worker, despite the app being local-first
+  and a natural fit for install + offline.

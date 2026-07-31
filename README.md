@@ -7,7 +7,7 @@ watch history from TV Time's official data export.**
 Dark, cinematic, poster-first, mobile-first, and fully bilingual
 (English / العربية with right-to-left support).
 
-![Home](docs/home.png)
+**▶ Live app: <https://engahumedi.github.io/tv-time/>**
 
 ## Features
 
