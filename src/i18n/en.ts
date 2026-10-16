@@ -484,6 +484,7 @@ export const en = {
     err_exists: 'An account with this email already exists. Try signing in.',
     err_weak: 'Please use a password of at least 6 characters.',
     err_generic: 'We couldn’t complete that just now. Please try again.',
+    err_offline: 'We couldn’t reach the server. Check your connection and try again in a few minutes.',
     working: 'Please wait…',
     welcome_title: 'Your shows, everywhere.',
     welcome_sub: 'Track what you watch, discover what’s next, and pick up on any device.',

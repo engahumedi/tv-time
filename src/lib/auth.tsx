@@ -32,6 +32,25 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/** Open the app on local data if the initial session check takes longer. */
+const READY_FALLBACK_MS = 6_000;
+/**
+ * Upper bound for an interactive auth call. Requests already time out in the
+ * client's fetch, but supabase-js serialises auth calls behind a lock that a
+ * stuck token refresh can hold, so the call itself needs a deadline too.
+ */
+const AUTH_CALL_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(p: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error('auth-unreachable')),
+      AUTH_CALL_TIMEOUT_MS,
+    );
+    p.then(resolve, reject).finally(() => window.clearTimeout(timer));
+  });
+}
+
 /** Where Supabase should send the user back after a reset-password email. */
 function resetRedirect(): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}`;
@@ -61,18 +80,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return;
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      const u = data.session?.user ?? null;
-      setUser(u);
-      setCloudUser(u?.id ?? null);
-      setReady(true);
-      // Existing session on app open: pull the account's latest data down so
-      // watches/shows added on another device (or session) show up here.
-      // Without this, sync only ran on a fresh SIGNED_IN and returning users
-      // saw stale local data (e.g. imported episodes appearing unwatched).
-      if (u) void runSync();
-    });
+    // Never block the app on the backend: if the session check hasn't settled
+    // (e.g. an expired token whose refresh keeps failing), open anyway with the
+    // local data; onAuthStateChange still fills the user in if it recovers.
+    const fallback = window.setTimeout(() => mounted && setReady(true), READY_FALLBACK_MS);
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        const u = data.session?.user ?? null;
+        setUser(u);
+        setCloudUser(u?.id ?? null);
+        // Existing session on app open: pull the account's latest data down so
+        // watches/shows added on another device (or session) show up here.
+        // Without this, sync only ran on a fresh SIGNED_IN and returning users
+        // saw stale local data (e.g. imported episodes appearing unwatched).
+        if (u) void runSync();
+      })
+      .catch(() => {
+        /* backend unreachable — run on local data */
+      })
+      .finally(() => {
+        window.clearTimeout(fallback);
+        if (mounted) setReady(true);
+      });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       const u = session?.user ?? null;
@@ -85,19 +117,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      window.clearTimeout(fallback);
       sub.subscription.unsubscribe();
     };
   }, []);
 
   async function signUp(email: string, password: string) {
     if (!supabase) throw new Error('auth-unavailable');
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await withTimeout(supabase.auth.signUp({ email, password }));
     if (error) throw error;
   }
 
   async function signIn(email: string, password: string) {
     if (!supabase) throw new Error('auth-unavailable');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await withTimeout(
+      supabase.auth.signInWithPassword({ email, password }),
+    );
     if (error) throw error;
   }
 
@@ -121,9 +156,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function sendPasswordReset(email: string) {
     if (!supabase) throw new Error('auth-unavailable');
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: resetRedirect(),
-    });
+    const { error } = await withTimeout(
+      supabase.auth.resetPasswordForEmail(email, { redirectTo: resetRedirect() }),
+    );
     if (error) throw error;
   }
 

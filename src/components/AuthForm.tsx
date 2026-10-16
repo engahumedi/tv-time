@@ -205,6 +205,12 @@ function GoogleIcon() {
 
 function friendlyError(err: unknown, t: (k: string) => string): string {
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  if (
+    /unreachable|failed to fetch|network|load failed|timeout|timed out|abort/.test(msg) ||
+    (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AuthRetryableFetchError'))
+  ) {
+    return t('auth.err_offline');
+  }
   if (msg.includes('already') || msg.includes('registered')) return t('auth.err_exists');
   if (msg.includes('invalid') || msg.includes('credentials')) return t('auth.err_invalid');
   if (msg.includes('password') || msg.includes('6 characters')) return t('auth.err_weak');

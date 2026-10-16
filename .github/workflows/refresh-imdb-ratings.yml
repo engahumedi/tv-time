@@ -21,6 +21,20 @@ permissions:
   contents: read
 
 jobs:
+  # GitHub switches off scheduled workflows in a repo with no commits for 60
+  # days. That silently stopped this job once (and with it the daily traffic
+  # that keeps the free Supabase project from pausing). Re-enabling the
+  # workflow through the API on every run resets that inactivity timer.
+  keepalive:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Keep this scheduled workflow enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/refresh-imdb-ratings.yml/enable"
+
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 30
