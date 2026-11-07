@@ -93,7 +93,7 @@ supabase secrets set OMDB_API_KEY=<مفتاح OMDb>
 
 1. أضف سرًّا ثالثًا: `SUPABASE_SERVICE_ROLE_KEY` = مفتاح **service_role**
    (من Project Settings → API). يُستخدم للكتابة في جداول المرجع فقط.
-2. شغّل سير العمل **Refresh IMDb ratings** يدويًا مرة واحدة من تبويب **Actions**
+2. شغّل سير العمل **Nightly refresh** يدويًا مرة واحدة من تبويب **Actions**
    لتعبئة البيانات (يستغرق ~دقيقة لـ ٦٠٠ ألف عمل).
 
 بعدها يعمل تلقائيًا **يوميًا**، ويسخّن أيضًا جدول الربط `tmdb_imdb` مسبقًا
