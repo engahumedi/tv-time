@@ -18,7 +18,7 @@ Time is shutting down), so users can bring shows, movies, and their whole watch
 history over.
 
 - **Repo:** `engahumedi/tv-time`
-- **Working branch:** `claude/showtrack-tv-tracker-27fepl` — this is the **only** branch on the remote and the **default** branch; GitHub Pages deploys directly from it (see `.github/workflows/deploy-pages.yml`). There is no separate `main`, so there's currently no PR (a base branch would have to be created first).
+- **Branches:** `claude/showtrack-tv-tracker-27fepl` is the **default** branch and the only one that **deploys** (GitHub Pages builds on every push to it — see `.github/workflows/deploy-pages.yml`). Later sessions were assigned `claude/showtrack-setup-hoaffk` as their working branch; both are kept at the **same commit** (push the work branch, then fast-forward the default: `git push origin claude/showtrack-setup-hoaffk:claude/showtrack-tv-tracker-27fepl`). There is no `main`, so no PR.
 - **Live site (GitHub Pages):** https://engahumedi.github.io/tv-time/
 - **Latest commit:** see `git log -1` — the branch is the source of truth.
 
@@ -29,6 +29,8 @@ history over.
 > and (b) **re-watches**, **avatar crop**, public-profile parity/polish, an
 > Upcoming **day-countdown**, and **desktop-width** fixes. **§14 "What's new (v2)"**
 > at the end has the complete current list; sections below are updated inline.
+> Later additions: **§15** IMDb-dataset ratings, **§16** performance/resilience,
+> and **§17 Operations & incidents** — read §17 first if the site is down.
 
 > ⚠️ **Container/branch state gotcha (important):** this session's cloud sandbox
 > has twice reverted the working tree to a **stale older commit** on session
@@ -36,6 +38,8 @@ history over.
 > on the remote. **On a fresh session, always run
 > `git fetch origin claude/showtrack-tv-tracker-27fepl` and
 > `git reset --hard origin/claude/showtrack-tv-tracker-27fepl`, then `npm install`
+> (`npx tsc` fails with "Cannot find type definition file for 'vite/client'"
+> until you do)
 > (newer deps like `qrcode` won't be present) before building.** Verify with
 > `git log --oneline -1` that HEAD matches the latest commit above.
 
@@ -209,9 +213,9 @@ been applied to the live Supabase project.
 - **Anon key + URL** are injected at build time by the GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) as `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`. The anon key is safe to expose (RLS protects data). The TMDB/OMDb keys are NOT in the client — they live in the Edge Function proxy.
 - **Applying schema changes:** `supabase/schema.sql` is idempotent — run it in the Supabase SQL editor. (It can also be applied via the Supabase Management API `POST /v1/projects/{ref}/database/query` with a Personal Access Token, but **do not store that token anywhere**; the owner should keep it revoked when not actively migrating.)
 - **Deploy:** push to the branch → GitHub Actions builds and deploys to Pages. Pages source must be "GitHub Actions" (not "deploy from branch"). Vite `base` is `/tv-time/` in build so assets resolve. Fastly/CDN can serve a stale edge for a bit after deploy.
-- **Keep-alive (`.github/workflows/nightly-refresh.yml`, daily 05:30 UTC):** a `keepalive` job re-enables the workflow (GitHub disables schedules after 60 days without commits) and reads from Supabase (free projects pause after 7 days without requests). If it fails with "Supabase answered …", the project is paused: restore it from the Supabase dashboard. History: in Sep–Oct 2026 the old `refresh-imdb-ratings.yml` was disabled for inactivity, then a manual run stuck in `queued` blocked every later run, and Supabase paused twice. The file was renamed to get a clean workflow record; the app also now opens on local data and shows "couldn't reach the server" instead of hanging when Supabase is down.
+- **Keep-alive:** `.github/workflows/nightly-refresh.yml` runs daily and keeps both GitHub's schedule and the free Supabase project from going idle. Outage history, symptoms and the restore procedure are in **§17**.
 - **Auth flow:** account **required** — the `Welcome` screen shows whenever Supabase is configured and no user is signed in (guest mode was removed). Sign in with **email/password** or **Google** (`signInWithGoogle` → `supabase.auth.signInWithOAuth`; redirect back = app base URL). The Google provider + Client ID/Secret are configured in the Supabase dashboard, and the OAuth client + redirect (`…supabase.co/auth/v1/callback`) in Google Cloud (app published, non-sensitive scopes only). On `SIGNED_IN`, `syncAfterLogin()` runs. Password reset via email link → `ResetPassword`; `updatePassword` also used by Settings → change password.
-- **TMDB/OMDb proxy caching:** the Edge Function caches successful browse/detail responses at the edge (Deno Cache API, shared) + in the browser (`Cache-Control`: 24h browse, 5 min search); failures are `no-store`. Deployed as function **v3** (`verify_jwt:false`). Cuts upstream TMDB calls and repeat invocations.
+- **TMDB/OMDb proxy caching:** the Edge Function caches successful browse/detail responses at the edge (Deno Cache API, shared) + in the browser (`Cache-Control`: 24h browse, 5 min search); failures are `no-store`. Currently deployed as function **v5** (`verify_jwt:false`; v5 added the `/ratings` batch endpoint, §15). Cuts upstream TMDB calls and repeat invocations.
 
 ---
 
@@ -303,7 +307,8 @@ counter**, then the clear "All done!" screen. `commitMovies` takes an
   ```
   Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
   ```
-- Only push to the working branch `claude/showtrack-tv-tracker-27fepl`. Use `git push -u origin <branch>` with retry/backoff on network errors.
+- Push to the session's working branch, then fast-forward the default branch `claude/showtrack-tv-tracker-27fepl` so the site deploys (see §1 "Branches"). Use `git push -u origin <branch>` with retry/backoff on network errors.
+- Supabase calls go through `fetchWithTimeout` (`lib/supabase.ts`, 15s) and interactive auth calls through `withTimeout` (`lib/auth.tsx`, 20s). Keep it that way: without them a dead backend leaves the app on its spinner forever (§17).
 
 ---
 
@@ -323,6 +328,7 @@ counter**, then the clear "All done!" screen. `commitMovies` takes an
 - **Supabase Personal Access Tokens** (used to apply migrations or deploy the Edge Function) must be **revoked** in Supabase → Account → Access Tokens as soon as the work is done, and never written to the repo or any file.
 - Never commit TV Time export data — it contains the user's email, IP addresses and tokens. Extract it to a temporary directory and delete it after testing.
 - The Supabase anon key is public by design (RLS enforces per-user access). TMDB/OMDb keys stay server-side in the Edge Function proxy.
+- ⚠️ **Leaked keys in git history (open):** early commits (`cc5f0aa`, `1605f96`, `5c4cddb`) hard-coded the TMDB key (`971118…52ee`) and OMDb key (`76c…ca`) in `deploy-pages.yml`. The repo is **public**, and both keys were still live when checked in Oct 2026. The current files are clean; the fix is to **rotate both keys** at TMDB/OMDb and set the new ones only as Edge Function secrets `TMDB_API_KEY` / `OMDB_API_KEY` (no code change). Rewriting history would not un-leak them.
 - The **service_role** key bypasses every RLS policy. It belongs only in GitHub Actions secrets (`SUPABASE_SERVICE_ROLE_KEY`) — never printed, committed, or pasted into chat. The **anon** key is public by design; RLS is what protects user data.
 
 ---
@@ -392,7 +398,7 @@ Poster grids show **IMDb** scores, served from our own mirror of IMDb's
 official daily dataset rather than a per-title API.
 
 - **Source:** `https://datasets.imdbws.com/title.ratings.tsv.gz` (free, official,
-  daily, ~1.7M titles). Rows with **50+ votes** (612,909) are loaded into
+  daily, ~1.7M titles). Rows with **50+ votes** (~626k as of Nov 2026) are loaded into
   `public.imdb_ratings (tconst, rating, votes)`.
 - **Mapping:** TMDB's list endpoints do **not** return an `imdb_id`, so the edge
   function resolves it once per title (`/movie/{id}` or `/tv/{id}/external_ids`)
@@ -471,3 +477,59 @@ staleness read. Real fixes it surfaced: `StarRating` minted its SVG gradient id
 with `Math.random()` on every render (now `useId()` — verified stable and unique
 in the browser), three ternaries used as statements, an `any` in `vite.config`,
 and two dead eslint-disable directives.
+
+---
+
+## 17. Operations & incidents (read this if the site is down)
+
+**Symptom → cause:** the site sits on a spinner, or "Sign in" stays on
+"Please wait…" (or, since the fix below, shows "couldn't reach the server").
+Almost always the **free Supabase project has paused** — it pauses after
+**7 days without requests**. Check: `https://ahibgeazsfftwzlzytah.supabase.co/auth/v1/health`
+returns NXDOMAIN while paused, then Cloudflare **521** for ~2-3 minutes while it
+restores, then 200.
+
+**Fix:** the owner opens the Supabase dashboard → project → **Restore project**
+(the assistant has no dashboard access). Wait until `auth/v1/health` and
+`rest/v1/imdb_ratings?select=tconst&limit=1` both return 200 **before** running
+the nightly workflow — a run during the 521 window fails ("upsert failed after
+retries" / "Supabase answered 521").
+
+**What keeps it up — `.github/workflows/nightly-refresh.yml`** (daily 05:30 UTC
+= 08:30 Saudi time, also runnable via *Run workflow*):
+- `keepalive` job (no dependencies, no concurrency group): re-enables its own
+  workflow through the API (GitHub disables schedules after **60 days without
+  commits**), then reads `auth/v1/health` and `imdb_ratings` with the public anon
+  key. If Supabase isn't 200 it **fails**, and GitHub emails the owner.
+- `refresh` job: `scripts/refresh-imdb-ratings.mjs` then
+  `scripts/warm-imdb-mappings.mjs` (needs the `SUPABASE_SERVICE_ROLE_KEY` secret).
+  Last verified run (7 Nov 2026): 626,288 ratings upserted in 60s, 211 new
+  mappings warmed in 10s; both jobs green.
+
+**App-side resilience (commit `36e6f36`):** every Supabase request has a 15s
+timeout; startup opens on local data after 6s if the session check hasn't
+settled (an expired token whose refresh keeps failing used to block it forever);
+sign-in/sign-up/reset have a 20s deadline and show `auth.err_offline`
+(EN/AR). Verified in Chromium against the paused project: app opens in ~6.8s
+with an expired stored session; sign-in shows the error in 0.4s.
+
+**Timeline of the Sep–Nov 2026 outage:**
+1. Last commit 31 Jul → GitHub set the old `refresh-imdb-ratings.yml` to
+   `disabled_inactivity` on **30 Sep** (its last run).
+2. No daily traffic → Supabase paused (~early Oct). Site hung on sign-in.
+3. **16 Oct:** owner restored the project and re-enabled the workflow; app-side
+   timeouts + a keepalive job shipped. But the manual run started that day sat in
+   **`queued` with zero jobs** forever (run `38930844105`), and **no scheduled run
+   was created after it** — so Supabase paused again ~a week later.
+4. **7 Nov:** workflow renamed to `nightly-refresh.yml` (a new workflow record,
+   free of the stuck run), workflow-level concurrency removed, Supabase ping
+   added to `keepalive`. Owner restored Supabase; second manual run fully green.
+
+**Limits of what the assistant can do here:** the GitHub integration returns
+**403** for enabling/dispatching/cancelling workflows and for Actions secrets,
+and there's no Supabase dashboard access. Reads (run status, job logs via
+`gh api`) work. So restores, *Run workflow*, *Enable workflow*, and cancelling
+stuck runs are the owner's clicks. The stuck run `38930844105` belongs to the
+old (deleted) workflow file and blocks nothing now; cancelling it is optional
+cleanup.
+
